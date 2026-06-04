@@ -1,0 +1,1947 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>1648 官職予約</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0a0e1a;--bg2:#111827;--bg3:#1c2537;--border:#1e3050;
+  --blue-light:#3b82f6;--red-light:#e74c3c;
+  --gold:#f7d774;--text:#e8edf5;--text2:#7a9cc0;--text3:#3a5070;
+  --p1:#f59e0b;--p2:#60a5fa;--p3:#a78bfa;
+  --empty:#1e2a3a;
+}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:14px;min-height:100vh;overflow-x:hidden;}
+
+/* ヘッダー */
+.header{background:linear-gradient(180deg,#0d1526,#0a0e1a);border-bottom:1px solid var(--border);padding:10px 12px;position:sticky;top:0;z-index:100;}
+.header-title{font-size:18px;font-weight:900;color:var(--gold);letter-spacing:1px;text-align:center;margin-bottom:6px;}
+.role-tabs{display:flex;gap:8px;margin-bottom:8px;}
+.role-tab{flex:1;padding:10px;border-radius:10px;border:2px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;font-weight:700;text-align:center;cursor:pointer;transition:all .2s;}
+.role-tab.active-blue{background:linear-gradient(180deg,#1a4a9e,#0d2d6e);border-color:var(--blue-light);color:#fff;box-shadow:0 0 16px rgba(59,130,246,.35);}
+.role-tab.active-red{background:linear-gradient(180deg,#8b1a1a,#5c1010);border-color:var(--red-light);color:#fff;box-shadow:0 0 16px rgba(231,76,60,.35);}
+.user-bar{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;}
+.user-name{font-size:13px;font-weight:700;color:var(--gold);}
+.user-status{font-size:11px;color:var(--text2);margin-left:auto;}
+.btn-sm{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text2);font-size:11px;cursor:pointer;}
+
+/* 凡例 */
+.legend{display:flex;gap:6px;padding:8px 12px;flex-wrap:wrap;justify-content:center;}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);}
+.legend-dot{width:14px;height:14px;border-radius:4px;flex-shrink:0;}
+
+/* お任せバナー */
+.omakase-banner{
+  margin:8px 12px;
+  padding:12px 16px;
+  border-radius:12px;
+  border:2px solid var(--border);
+  background:var(--bg3);
+  display:flex;
+  align-items:center;
+  gap:12px;
+  cursor:pointer;
+  transition:all .2s;
+}
+.omakase-banner:hover{border-color:#6b7280;}
+.omakase-banner.selected{
+  background:linear-gradient(180deg,#1e3a20,#0f2010);
+  border-color:#22c55e;
+  box-shadow:0 0 16px rgba(34,197,94,.2);
+}
+.omakase-check{
+  width:28px;height:28px;border-radius:50%;
+  border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+  transition:all .2s;
+}
+.omakase-banner.selected .omakase-check{
+  background:#166534;border-color:#22c55e;
+}
+.omakase-text{flex:1;}
+.omakase-title{font-size:13px;font-weight:700;color:var(--text);}
+.omakase-sub{font-size:11px;color:var(--text2);margin-top:2px;}
+
+/* 座席表 */
+.seat-container{padding:4px 8px 140px;max-width:480px;margin:0 auto;}
+.block-header{text-align:center;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text3);padding:8px 0 4px;border-top:1px solid var(--border);margin-bottom:4px;margin-top:8px;}
+.time-row{display:grid;grid-template-columns:52px 1fr;align-items:center;gap:4px;margin-bottom:4px;}
+.time-label{font-size:11px;color:var(--text2);text-align:right;padding-right:8px;font-weight:700;white-space:nowrap;}
+
+.time-block{
+  border-radius:8px;border:1px solid var(--border);background:var(--bg3);
+  display:flex;align-items:center;overflow:hidden;cursor:pointer;
+  transition:all .15s;height:40px;
+}
+.time-block:active{transform:scale(.98);}
+.time-block.full{cursor:default;border-color:#7f1d1d;background:#1a0808;}
+.time-block.omakase-mode{opacity:.35;pointer-events:none;}
+.time-block:not(.full):not(.omakase-mode):hover{border-color:var(--blue-light);}
+
+.slot-indicators{display:flex;flex:1;height:100%;align-items:center;padding:0 8px;gap:4px;}
+.slot-dot{
+  flex:1;height:24px;border-radius:5px;
+  transition:all .2s;
+}
+.slot-dot.open{background:var(--empty);border:1px solid #2a3a50;}
+.slot-dot.taken-1{background:linear-gradient(180deg,#92400e,#6b3008);border:1px solid var(--p1);}
+.slot-dot.taken-2{background:linear-gradient(180deg,#1e3a8a,#102060);border:1px solid var(--p2);}
+.slot-dot.taken-3{background:linear-gradient(180deg,#4c1d95,#2e0f60);border:1px solid var(--p3);}
+.slot-dot.my.taken-1{box-shadow:0 0 8px rgba(245,158,11,.6);border-color:#f7d774;}
+.slot-dot.my.taken-2{box-shadow:0 0 8px rgba(96,165,250,.5);border-color:#93c5fd;}
+.slot-dot.my.taken-3{box-shadow:0 0 8px rgba(167,139,250,.5);border-color:#c4b5fd;}
+
+.full-label{padding:0 10px;font-size:12px;font-weight:900;color:#ef4444;}
+.open-count{padding:0 8px;font-size:10px;color:var(--text3);white-space:nowrap;}
+.my-badge{padding:0 8px;font-size:10px;color:var(--gold);font-weight:700;white-space:nowrap;}
+
+/* ポップアップ */
+.popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end;justify-content:center;}
+.popup-overlay.open{display:flex;}
+.popup{background:var(--bg2);border:1px solid var(--border);border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-width:480px;animation:slideUp .25s ease;}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.popup-title{font-size:16px;font-weight:900;color:var(--gold);margin-bottom:4px;}
+.popup-sub{font-size:12px;color:var(--text2);margin-bottom:14px;}
+.pref-buttons{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+.pref-btn{height:64px;border-radius:10px;border:2px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
+.pref-btn .pn{font-size:24px;font-weight:900;line-height:1;}
+.pref-btn .pl{font-size:10px;}
+.pref-btn.sel-1{background:linear-gradient(180deg,#92400e,#6b3008);border-color:var(--p1);color:#fde68a;box-shadow:0 0 12px rgba(245,158,11,.3);}
+.pref-btn.sel-2{background:linear-gradient(180deg,#1e3a8a,#102060);border-color:var(--p2);color:#93c5fd;box-shadow:0 0 12px rgba(96,165,250,.3);}
+.pref-btn.sel-3{background:linear-gradient(180deg,#4c1d95,#2e0f60);border-color:var(--p3);color:#c4b5fd;box-shadow:0 0 12px rgba(167,139,250,.3);}
+.pref-btn.disabled{opacity:.3;pointer-events:none;}
+.popup-actions{display:flex;gap:8px;}
+.btn-cancel{flex:1;height:48px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:14px;font-weight:700;cursor:pointer;}
+.btn-confirm{flex:2;height:48px;border-radius:10px;border:none;background:linear-gradient(180deg,#1a6ef5,#0e4fbf);color:#fff;font-size:14px;font-weight:900;cursor:pointer;opacity:.4;pointer-events:none;}
+.btn-confirm.active{opacity:1;pointer-events:auto;box-shadow:0 4px 16px rgba(26,110,245,.4);}
+.btn-remove{height:48px;padding:0 14px;border-radius:10px;border:1px solid #ef4444;background:#4c1d1d;color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;}
+
+/* 最終確認・完了 */
+.bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:linear-gradient(180deg,transparent,rgba(10,14,26,.97));
+  padding:8px 12px 16px;z-index:50;
+}
+.bottom-inner{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:10px 12px;max-width:480px;margin:0 auto;}
+.summary-title{font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:700;}
+.summary-items{display:flex;gap:6px;margin-bottom:10px;}
+.summary-item{flex:1;padding:6px 4px;border-radius:8px;text-align:center;font-size:10px;line-height:1.4;}
+.summary-item.p1{background:rgba(133,77,14,.5);border:1px solid var(--p1);color:#fde68a;}
+.summary-item.p2{background:rgba(30,58,138,.5);border:1px solid var(--p2);color:#93c5fd;}
+.summary-item.p3{background:rgba(76,29,149,.5);border:1px solid var(--p3);color:#c4b5fd;}
+.summary-item.omakase{background:rgba(22,101,52,.4);border:1px solid #22c55e;color:#86efac;grid-column:1/-1;}
+.summary-item.empty-slot{background:var(--bg);border:1px dashed var(--border);color:var(--text3);}
+.summary-time{font-weight:900;font-size:11px;}
+
+/* 決定・やり直しボタン */
+.action-buttons{display:flex;gap:8px;}
+.btn-reset{flex:1;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;}
+.btn-decide{flex:2;height:44px;border-radius:10px;border:none;background:linear-gradient(180deg,#d97706,#92400e);color:#fde68a;font-size:14px;font-weight:900;cursor:pointer;opacity:.4;pointer-events:none;}
+.btn-decide.active{opacity:1;pointer-events:auto;box-shadow:0 4px 16px rgba(217,119,6,.4);}
+
+/* 完了画面 */
+.complete-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:400;align-items:center;justify-content:center;padding:20px;}
+.complete-overlay.open{display:flex;}
+.complete-box{background:var(--bg2);border:2px solid #22c55e;border-radius:20px;padding:32px 24px;width:100%;max-width:320px;text-align:center;animation:popIn .3s ease;}
+@keyframes popIn{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.complete-icon{font-size:56px;margin-bottom:12px;}
+.complete-title{font-size:20px;font-weight:900;color:#86efac;margin-bottom:8px;}
+.complete-sub{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:20px;}
+.complete-detail{background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:20px;text-align:left;}
+.complete-detail-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);}
+.complete-detail-row:last-child{border-bottom:none;}
+.btn-close-complete{width:100%;height:48px;border-radius:10px;border:1px solid #22c55e;background:#166534;color:#86efac;font-size:15px;font-weight:900;cursor:pointer;}
+
+/* 登録画面 */
+.register-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;}
+.register-box{background:var(--bg2);border:2px solid var(--gold);border-radius:16px;padding:24px;width:100%;max-width:340px;}
+.register-box h2{color:var(--gold);font-size:18px;margin-bottom:6px;text-align:center;}
+.register-box p{color:var(--text2);font-size:12px;margin-bottom:16px;line-height:1.6;text-align:center;}
+.reg-section{margin-bottom:14px;}
+.reg-label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:700;}
+.reg-input{width:100%;height:44px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;padding:0 12px;outline:none;font-family:'Noto Sans JP',sans-serif;}
+.reg-input:focus{border-color:var(--gold);}
+.choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.choice-btn{padding:12px 6px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;text-align:center;line-height:1.4;transition:all .15s;}
+.choice-btn.selected{background:linear-gradient(180deg,#1a4a9e,#0d2d6e);border-color:var(--blue-light);color:#fff;box-shadow:0 0 10px rgba(59,130,246,.3);}
+.btn-start{width:100%;height:48px;border-radius:10px;border:none;background:linear-gradient(180deg,#d97706,#92400e);color:#fde68a;font-size:15px;font-weight:900;cursor:pointer;margin-top:4px;}
+.reg-err{color:#f87171;font-size:11px;text-align:center;min-height:16px;margin-top:6px;}
+
+
+/* 管理者全画面 */
+#adminScreen{display:none;position:fixed;inset:0;z-index:500;background:var(--bg);flex-direction:column;overflow:hidden;}
+#adminScreen.open{display:flex;}
+.admin-header{background:linear-gradient(180deg,#0d1526,#0a0e1a);border-bottom:2px solid var(--gold);padding:10px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.admin-header-title{font-size:16px;font-weight:900;color:var(--gold);flex:1;}
+.admin-header-sub{font-size:10px;color:var(--text2);margin-top:1px;}
+.btn-back{height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.admin-tab-bar{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.admin-tab-bar::-webkit-scrollbar{display:none;}
+.admin-tab{flex:1;min-width:64px;padding:11px 4px;text-align:center;font-size:11px;font-weight:700;color:var(--text2);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;}
+.admin-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.admin-body{flex:1;overflow-y:auto;padding:12px 12px 40px;}
+.admin-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;}
+.admin-card-title{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.admin-page{display:none;}
+.admin-page.active{display:block;}
+.admin-step{background:linear-gradient(180deg,#172033,#101827);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;}
+.admin-step-title{font-size:13px;font-weight:900;color:var(--gold);margin-bottom:4px;}
+.admin-step-text{font-size:11px;color:var(--text2);line-height:1.6;}
+.admin-input{width:100%;height:38px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:0 10px;outline:none;font-family:'Noto Sans JP',sans-serif;}
+.admin-input:focus{border-color:var(--gold);}
+.admin-btn{height:40px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;padding:0 14px;white-space:nowrap;}
+.admin-btn.gold{border:none;background:linear-gradient(180deg,#d97706,#92400e);color:#fde68a;}
+.admin-btn.blue{border:none;background:linear-gradient(180deg,#1a6ef5,#0e4fbf);color:#fff;}
+.admin-btn.green{border-color:var(--green-light,#22c55e);background:#166534;color:#86efac;}
+.admin-btn.red{border-color:#ef4444;background:#4c1d1d;color:#fca5a5;}
+.admin-btn.sm{height:32px;font-size:12px;padding:0 10px;}
+.admin-row{display:flex;align-items:center;gap:8px;}
+.admin-fl{flex:1;}
+.admin-info{background:var(--bg);border-radius:8px;padding:10px;font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px;}
+.tgl{position:relative;width:48px;height:26px;flex-shrink:0;}
+.tgl input{opacity:0;width:0;height:0;}
+.tsl{position:absolute;cursor:pointer;inset:0;background:var(--bg3);border-radius:26px;transition:.2s;}
+.tsl:before{content:"";position:absolute;width:20px;height:20px;left:3px;bottom:3px;background:var(--text3);border-radius:50%;transition:.2s;}
+input:checked+.tsl{background:#22c55e;}
+input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.toggle-row:last-child{border-bottom:none;}
+.seg{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border);}
+.seg .seg-btn{flex:1;padding:9px 4px;text-align:center;font-size:12px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text2);border:none;}
+.seg .seg-btn.on{background:var(--bg2);color:var(--gold);}
+.priority-row{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;}
+.priority-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.priority-name{font-size:14px;font-weight:900;flex:1;}
+.priority-pt{font-size:22px;font-weight:900;color:var(--gold);}
+.pt-chips{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;}
+.pt-chip{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--bg);border:1px solid var(--border);}
+.pref-list{display:flex;flex-direction:column;gap:4px;}
+.pref-item{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 8px;border-radius:6px;background:var(--bg);}
+.pref-badge{font-size:10px;font-weight:900;padding:2px 7px;border-radius:20px;}
+.pref-badge.p1{background:rgba(133,77,14,.5);border:1px solid var(--p1);color:#fde68a;}
+.pref-badge.p2{background:rgba(30,58,138,.5);border:1px solid var(--p2);color:#93c5fd;}
+.pref-badge.p3{background:rgba(76,29,149,.5);border:1px solid var(--p3);color:#c4b5fd;}
+.pref-badge.omakase{background:rgba(22,101,52,.4);border:1px solid #22c55e;color:#86efac;}
+.manual-pt-row{display:flex;align-items:center;gap:6px;padding:8px 0;border-top:1px solid var(--border);margin-top:6px;}
+.manual-pt-label{font-size:11px;color:var(--text2);flex:1;}
+.svs-stepper{display:flex;align-items:center;gap:4px;}
+.svs-val{min-width:28px;text-align:center;font-size:15px;font-weight:900;color:var(--gold);}
+.step-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.result-slot{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;}
+.result-time{font-size:15px;font-weight:900;color:var(--gold);margin-bottom:6px;}
+.result-winner{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:rgba(22,101,52,.2);border:1px solid #22c55e;margin-bottom:6px;font-size:13px;}
+.result-backup{font-size:11px;color:var(--text2);padding:4px 8px;}
+.post-box{width:100%;min-height:160px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;padding:10px;font-family:'Noto Sans JP',sans-serif;resize:vertical;line-height:1.7;}
+.empty-admin{background:var(--bg);border:1px dashed var(--border);border-radius:12px;padding:24px;text-align:center;color:var(--text3);font-size:13px;line-height:1.6;}
+.member-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:8px;}
+.member-row:last-child{border-bottom:none;}
+.member-name{font-size:14px;font-weight:700;flex:1;}
+/* 管理ボタン（右下） */
+.admin-toggle{position:fixed;right:12px;bottom:132px;z-index:80;width:auto;min-width:64px;height:40px;border-radius:999px;font-size:13px;padding:0 14px;background:rgba(10,14,26,.88);border:1px solid var(--border);color:var(--text2);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.4);font-weight:700;font-family:'Noto Sans JP',sans-serif;}
+/* ログインオーバーレイ */
+.admin-login-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.76);z-index:520;align-items:center;justify-content:center;padding:20px;}
+.admin-login-overlay.open{display:flex;}
+.admin-login-box{width:100%;max-width:320px;background:var(--bg2);border:2px solid var(--gold);border-radius:16px;padding:24px;}
+.admin-login-title{font-size:16px;font-weight:900;color:var(--gold);margin-bottom:6px;text-align:center;}
+.admin-login-sub{font-size:11px;color:var(--text2);line-height:1.6;text-align:center;margin-bottom:14px;}
+.admin-login-input{width:100%;height:48px;background:var(--bg);border:2px solid var(--border);border-radius:10px;color:var(--text);font-size:20px;text-align:center;letter-spacing:4px;padding:0 12px;outline:none;font-family:'Noto Sans JP',sans-serif;margin-bottom:8px;}
+.admin-login-input:focus{border-color:var(--gold);}
+.admin-login-actions{display:flex;gap:8px;margin-top:10px;}
+.admin-login-err{min-height:16px;color:#f87171;font-size:11px;text-align:center;}
+
+
+</style>
+</head>
+<body>
+
+<!-- 状態表示（締切済み・未実施） -->
+<div class="state-overlay" id="stateOverlay">
+  <div class="state-card">
+    <div class="state-icon" id="stateIcon">ℹ️</div>
+    <div class="state-title" id="stateTitle">現在実施中のアンケートはありません</div>
+    <div class="state-message" id="stateMessage">募集が開始されるまでお待ちください。</div>
+    <div class="state-sub">管理者は右下の「管理」からログインできます。</div>
+  </div>
+</div>
+
+<!-- 登録画面 -->
+<div class="register-overlay" id="registerOverlay">
+  <div class="register-box">
+    <h2>👤 参加登録</h2>
+    <p>ゲーム内ネームと各項目を入力してください</p>
+    <div class="reg-section">
+      <label class="reg-label">ゲーム内ネーム</label>
+      <input class="reg-input" id="regName" type="text" placeholder="名前を入力" maxlength="20">
+    </div>
+    <div id="questionsArea"></div>
+    <div class="reg-err" id="regErr"></div>
+    <button class="btn-start" onclick="startReservation()">✓ 予約画面へ進む</button>
+  </div>
+</div>
+
+<!-- ヘッダー -->
+<div class="header">
+  <div class="header-title">1648 官職予約</div>
+  <div class="role-tabs" id="roleTabs"></div>
+  <div class="user-bar">
+    <span class="user-name" id="userName">👤 未登録</span>
+    <span class="user-status" id="userStatus">未回答</span>
+    <button class="btn-sm" onclick="showRegister()">変更</button>
+  </div>
+</div>
+
+<!-- 凡例 -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#1e2a3a;border:1px solid #2a3a50"></div>空き</div>
+  <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(#92400e,#6b3008);border:1px solid #f59e0b"></div>第1希望</div>
+  <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(#1e3a8a,#102060);border:1px solid #60a5fa"></div>第2希望</div>
+  <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(#4c1d95,#2e0f60);border:1px solid #a78bfa"></div>第3希望</div>
+  <div class="legend-item" style="color:#ef4444;font-weight:900">満</div>
+</div>
+
+<!-- お任せバナー -->
+<div class="omakase-banner" id="omakaseBanner" onclick="toggleOmakase()">
+  <div class="omakase-check" id="omakaseCheck"></div>
+  <div class="omakase-text">
+    <div class="omakase-title">時間帯はお任せ</div>
+    <div class="omakase-sub">時間帯にこだわりがない場合はこちらを選択</div>
+  </div>
+</div>
+
+<!-- 座席表 -->
+<div class="seat-container" id="seatContainer"></div>
+
+<!-- 下部バー（サマリー＋決定） -->
+<div class="bottom-bar">
+  <div class="bottom-inner">
+    <div class="summary-title">📋 回答状況</div>
+    <div class="summary-items" id="summaryItems"></div>
+    <div class="action-buttons">
+      <button class="btn-reset" onclick="resetAll()">↩ やり直す</button>
+      <button class="btn-decide" id="btnDecide" onclick="showConfirm()">✓ 決定する</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- 管理者ボタン -->
+<button class="admin-toggle" onclick="openAdmin()">管理</button>
+
+<!-- 管理者ログイン -->
+<div class="admin-login-overlay" id="adminLoginOverlay" onclick="adminLoginOverlayClick(event)">
+  <div class="admin-login-box">
+    <div class="admin-login-title">🔐 管理者ログイン</div>
+    <div class="admin-login-sub">管理者パスを入力してください</div>
+    <input class="admin-login-input" id="adminPasswordInput" type="password" inputmode="numeric" placeholder="パスワード"
+      onkeydown="if(event.key==='Enter')loginAdmin()">
+    <div class="admin-login-err" id="adminLoginErr"></div>
+    <div class="admin-login-actions">
+      <button class="admin-btn" style="flex:1;height:42px" onclick="closeAdminLogin()">キャンセル</button>
+      <button class="admin-btn gold" style="flex:1;height:42px" onclick="loginAdmin()">ログイン</button>
+    </div>
+  </div>
+</div>
+
+<!-- 管理者全画面 -->
+<div id="adminScreen">
+  <!-- 管理者ヘッダー -->
+  <div class="admin-header">
+    <button class="btn-back" onclick="closeAdmin()">← 戻る</button>
+    <div>
+      <div class="admin-header-title">👑 管理者画面</div>
+      <div class="admin-header-sub" id="adminHeaderSub">受付中</div>
+    </div>
+  </div>
+  <!-- タブバー -->
+  <div class="admin-tab-bar">
+    <div class="admin-tab active" data-atab="settings" onclick="switchAdminTab(this)">設定</div>
+    <div class="admin-tab" data-atab="members" onclick="switchAdminTab(this)">メンバー</div>
+    <div class="admin-tab" data-atab="priority" onclick="switchAdminTab(this)">申請者加点</div>
+    <div class="admin-tab" data-atab="result" onclick="switchAdminTab(this)">時間別集計</div>
+    <div class="admin-tab" data-atab="post" onclick="switchAdminTab(this)">投稿文</div>
+  </div>
+  <!-- ボディ -->
+  <div class="admin-body">
+
+    <!-- 設定 -->
+    <div class="admin-page active" id="apage-settings">
+      <div class="admin-card">
+        <div class="admin-card-title">アンケート対象官職</div>
+        <div class="toggle-row">
+          <div><div style="font-weight:700">⚔️ 副執政官</div><div style="font-size:11px;color:var(--text2)">予約アンケートを受け付ける</div></div>
+          <label class="tgl"><input type="checkbox" id="tog-副執政官" checked onchange="saveRoleSettings()"><span class="tsl"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div style="font-weight:700">📚 教育部長</div><div style="font-size:11px;color:var(--text2)">予約アンケートを受け付ける</div></div>
+          <label class="tgl"><input type="checkbox" id="tog-教育部長" onchange="saveRoleSettings()"><span class="tsl"></span></label>
+        </div>
+      </div>
+      <div class="admin-card">
+        <div class="admin-card-title">アンケート締切</div>
+        <div class="seg" style="margin-bottom:12px">
+          <div class="seg-btn on" id="seg-auto" onclick="setDeadlineMode('auto')">日時指定</div>
+          <div class="seg-btn" id="seg-manual" onclick="setDeadlineMode('manual')">手動締切</div>
+        </div>
+        <div id="deadline-auto-area">
+          <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">締切日時</label>
+          <input class="admin-input" type="datetime-local" id="deadlineInput" style="margin-bottom:10px">
+          <button class="admin-btn blue" style="width:100%" onclick="saveDeadline()">締切を設定する</button>
+        </div>
+        <div id="deadline-manual-area" style="display:none">
+          <div class="admin-info">手動締切モードです。</div>
+          <button class="admin-btn red" style="width:100%;height:44px" onclick="manualClose()">🔒 今すぐ締め切る</button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+          <div style="font-size:12px;color:var(--text2)">現在の状態</div>
+          <span id="adminStatusBadge" style="font-size:12px;font-weight:700;color:#22c55e">受付中</span>
+        </div>
+      </div>
+      <div class="admin-card">
+        <div class="admin-card-title">質問編集（4択固定）</div>
+        <div id="adminQuestionList"></div>
+        <button class="admin-btn green" style="margin-top:8px;width:100%" onclick="addAdminQuestion()">＋ 質問を追加</button>
+        <div class="admin-info" style="margin-top:8px">※ポイントは管理者のみ確認できます</div>
+      </div>
+    </div>
+
+    <!-- メンバー管理 -->
+    <div class="admin-page" id="apage-members">
+      <div class="admin-card">
+        <div class="admin-card-title">メンバー追加</div>
+        <div class="admin-row">
+          <input class="admin-input admin-fl" id="newMemberName" placeholder="ゲーム内ネーム">
+          <button class="admin-btn blue admin-btn sm" onclick="addAdminMember()">追加</button>
+        </div>
+      </div>
+      <div class="admin-card">
+        <div class="admin-card-title">メンバー一覧</div>
+        <div class="admin-info">
+          <span style="color:var(--gold)">★代表</span>＝サーバー代表集結主 +2　
+          <span style="color:#22c55e">●集結</span>＝同盟集結主 +1　
+          SVS＝貢献度ポイント（裁量）
+        </div>
+        <div id="adminMemberList"></div>
+      </div>
+    </div>
+
+    <!-- 申請者加点 -->
+    <div class="admin-page" id="apage-priority">
+      <div class="admin-step">
+        <div class="admin-step-title">締切後にやること</div>
+        <div class="admin-step-text">アンケート締切後、回答者一覧にポイントを付けます。集結主・SVS貢献度はメンバー管理で設定した値が自動で反映されます。</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="admin-btn blue" style="flex:1;height:42px" onclick="generateDemoSubmissions()">デモ申請を追加</button>
+        <button class="admin-btn red" style="flex:1;height:42px" onclick="clearManualPoints()">加点を全クリア</button>
+      </div>
+      <div id="priorityList"></div>
+    </div>
+
+    <!-- 時間別集計 -->
+    <div class="admin-page" id="apage-result">
+      <div class="admin-step">
+        <div class="admin-step-title">時間別の判定</div>
+        <div class="admin-step-text">第1希望→第2希望→第3希望の順で割り当てます。同ポイントは回答順優先です。</div>
+      </div>
+      <div id="resultList"></div>
+    </div>
+
+    <!-- 投稿文 -->
+    <div class="admin-page" id="apage-post">
+      <div class="admin-step">
+        <div class="admin-step-title">Discord投稿用</div>
+        <div class="admin-step-text">全員周知用は時間と名前だけ。管理者用はポイント・希望順位・補欠候補まで確認できます。</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">全員周知用</div>
+      <textarea class="post-box" id="postTextPublic" readonly></textarea>
+      <button class="admin-btn gold" style="width:100%;height:44px;margin-top:8px" onclick="copyPostText('public')">全員周知用をコピー</button>
+      <div style="font-size:13px;font-weight:700;color:var(--text2);margin:14px 0 6px">管理者用 詳細</div>
+      <textarea class="post-box" id="postTextAdmin" readonly></textarea>
+      <button class="admin-btn blue" style="width:100%;height:44px;margin-top:8px" onclick="copyPostText('admin')">管理者用をコピー</button>
+    </div>
+
+  </div><!-- /admin-body -->
+</div><!-- /adminScreen -->
+
+<!-- 希望選択ポップアップ -->
+<div class="popup-overlay" id="popupOverlay" onclick="overlayClick(event)">
+  <div class="popup">
+    <div class="popup-title" id="popupTitle"></div>
+    <div class="popup-sub" id="popupSub">希望順位を選択してください</div>
+    <div class="pref-buttons">
+      <div class="pref-btn" id="prefBtn1" onclick="selectPref(1)"><span class="pn">1</span><span class="pl">第1希望</span></div>
+      <div class="pref-btn" id="prefBtn2" onclick="selectPref(2)"><span class="pn">2</span><span class="pl">第2希望</span></div>
+      <div class="pref-btn" id="prefBtn3" onclick="selectPref(3)"><span class="pn">3</span><span class="pl">第3希望</span></div>
+    </div>
+    <div class="popup-actions">
+      <button class="btn-cancel" onclick="closePopup()">キャンセル</button>
+      <button class="btn-remove" id="btnRemove" onclick="removePref()" style="display:none">取消</button>
+      <button class="btn-confirm" id="btnConfirm" onclick="confirmPref()">✓ 完了</button>
+    </div>
+  </div>
+</div>
+
+<!-- 完了画面 -->
+<div class="complete-overlay" id="completeOverlay">
+  <div class="complete-box">
+    <div class="complete-icon">✅</div>
+    <div class="complete-title">受付完了！</div>
+    <div class="complete-sub">アンケートを受け付けました。<br>結果は管理者から通知されます。</div>
+    <div class="complete-detail" id="completeDetail"></div>
+    <button class="btn-close-complete" onclick="closeComplete()">閉じる</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+<script>
+// ===================================================
+// Firebase 初期化
+// ===================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCEELGkoD0E2BweLmt3ae8z622u2KFYeqQ",
+  authDomain: "yoyaku-4ec7c.firebaseapp.com",
+  databaseURL: "https://yoyaku-4ec7c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "yoyaku-4ec7c",
+  storageBucket: "yoyaku-4ec7c.firebasestorage.app",
+  messagingSenderId: "753962945830",
+  appId: "1:753962945830:web:c74bb9bbef3ffdda9905e7"
+};
+let fbApp = null, fbDb = null;
+try{
+  fbApp = firebase.initializeApp(firebaseConfig);
+  fbDb  = firebase.database();
+  console.log("Firebase: connected");
+}catch(e){ console.warn("Firebase init failed", e); }
+
+// DBパス
+const DB_CONFIG      = "config";           // 管理者設定・質問
+const DB_SURVEY      = "survey";           // アンケート状態
+const DB_SEATS       = "seats";            // 座席データ（リアルタイム）
+const DB_SUBMISSIONS = "submissions";      // 回答データ
+const DB_MANUALPTS   = "manualPoints";     // 手動ポイント
+const DB_MEMBERS     = "members";          // メンバーリスト
+
+// ===================================================
+// 管理者設定（Firebase接続後は動的取得）
+// ===================================================
+const ADMIN_CONFIG = {
+  activeRoles: ['副執政官','教育部長'],
+  questions: [
+    {
+      id: "q1",
+      label: "使用できる加速量",
+      choices: [
+        { text: "300日以上", pt: 2 },
+        { text: "150日以上", pt: 1 },
+        { text: "100日以上", pt: 0 },
+        { text: "100日未満", pt: -1 },
+      ]
+    }
+  ]
+};
+
+// ===================================================
+// アンケート状態設定
+// status: 'open' 募集中 / 'closed' 締切済 / 'none' 未実施 / 'published' 結果公開
+// 締切済み表示は endedAt と同じ日だけ。それ以外は未実施表示。
+// ===================================================
+const PUBLIC_SURVEY = {
+  id: 'survey-001',
+  title: '教育部長予約',
+  status: 'open',
+  endedAt: new Date().toISOString(),
+  published: false
+};
+
+const ROLE_CONFIG = {
+  '副執政官': { icon:'⚔️', color:'blue' },
+  '教育部長':  { icon:'📚', color:'red'  },
+};
+
+// ===================================================
+// 時間帯生成
+// ===================================================
+function makeSlots(startH, startM, count){
+  const slots = [];
+  let h = startH, m = startM;
+  for(let i = 0; i < count; i++){
+    slots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+    m += 30; if(m >= 60){ m = 0; h = (h + 1) % 24; }
+  }
+  return slots;
+}
+const AM_SLOTS = makeSlots(9, 0, 24);
+const PM_SLOTS = makeSlots(21, 0, 24);
+const ALL_SLOTS = [...AM_SLOTS, ...PM_SLOTS];
+
+// ===================================================
+// 座席データ
+// ===================================================
+const seats = {}, isMe = {};
+ADMIN_CONFIG.activeRoles.forEach(role => {
+  seats[role] = {}; isMe[role] = {};
+  ALL_SLOTS.forEach(t => {
+    seats[role][t] = [0, 0, 0];
+    isMe[role][t] = [false, false, false];
+  });
+});
+
+// デモデータ削除済み（Firebase接続）
+
+const myReservations = {1:null, 2:null, 3:null};
+let isOmakase = false;
+let currentRole = ADMIN_CONFIG.activeRoles[0] || '';
+let userName = '';
+let userAnswers = {};
+let popupTarget = {time:null, selectedPref:null};
+let submitted = false;
+
+
+// ===================================================
+// 集計用データ（Firebase接続前のローカル版）
+// ===================================================
+let submissions = [];
+let manualPoints = {};
+let surveys = [PUBLIC_SURVEY];
+let currentSurveyId = PUBLIC_SURVEY.id;
+let finalResults = [];
+
+// ===================================================
+// Firebase リアルタイム同期
+// ===================================================
+function initFirebase(){
+  if(!fbDb) return;
+
+  // 設定を読み込み
+  fbDb.ref(DB_CONFIG).on('value', snap=>{
+    const d = snap.val();
+    if(!d) return;
+    if(d.activeRoles) ADMIN_CONFIG.activeRoles = d.activeRoles;
+    if(d.questions)   ADMIN_CONFIG.questions   = d.questions;
+    buildRoleTabs();
+    buildQuestions();
+  });
+
+  // アンケート状態を読み込み
+  fbDb.ref(DB_SURVEY).on('value', snap=>{
+    const d = snap.val();
+    if(!d) return;
+    PUBLIC_SURVEY.status  = d.status  || 'open';
+    PUBLIC_SURVEY.endedAt = d.endedAt || null;
+    PUBLIC_SURVEY.title   = d.title   || PUBLIC_SURVEY.title;
+    currentSurveyId       = d.id      || currentSurveyId;
+    applyPublicSurveyState();
+  });
+
+  // 座席データをリアルタイム同期
+  fbDb.ref(DB_SEATS).on('value', snap=>{
+    const d = snap.val();
+    if(!d) return;
+    ADMIN_CONFIG.activeRoles.forEach(role=>{
+      if(!d[role]) return;
+      ALL_SLOTS.forEach(t=>{
+        if(d[role][t] !== undefined){
+          const slot = d[role][t];
+          // 自分の予約は保持しつつ他の人の情報を反映
+          seats[role][t] = slot.counts || [0,0,0];
+        }
+      });
+    });
+    renderSeats();
+  });
+
+  // 回答データを読み込み（管理者用）
+  fbDb.ref(`${DB_SUBMISSIONS}/${currentSurveyId}`).on('value', snap=>{
+    const d = snap.val();
+    submissions = d ? Object.values(d) : [];
+  });
+
+  // 手動ポイントを読み込み
+  fbDb.ref(DB_MANUALPTS).on('value', snap=>{
+    const d = snap.val();
+    if(d) manualPoints = d;
+  });
+
+  // メンバーリストを読み込み
+  fbDb.ref(DB_MEMBERS).on('value', snap=>{
+    const d = snap.val();
+    if(d) adminMembers = Object.values(d);
+  });
+}
+
+// 座席データをDBに保存
+function saveSeatsToDB(){
+  if(!fbDb) return;
+  const data = {};
+  ADMIN_CONFIG.activeRoles.forEach(role=>{
+    data[role] = {};
+    ALL_SLOTS.forEach(t=>{
+      data[role][t] = { counts: seats[role][t] };
+    });
+  });
+  fbDb.ref(DB_SEATS).set(data).catch(e=>console.warn("seats save failed",e));
+}
+
+// 管理者設定をDBに保存
+function saveConfigToDB(){
+  if(!fbDb) return;
+  fbDb.ref(DB_CONFIG).set({
+    activeRoles: ADMIN_CONFIG.activeRoles,
+    questions:   ADMIN_CONFIG.questions,
+  }).catch(e=>console.warn("config save failed",e));
+}
+
+// 手動ポイントをDBに保存
+function saveManualPointsToDB(){
+  if(!fbDb) return;
+  fbDb.ref(DB_MANUALPTS).set(manualPoints).catch(e=>console.warn("manualPts save failed",e));
+}
+
+// メンバーリストをDBに保存
+function saveMembersToDB(){
+  if(!fbDb) return;
+  const data = {};
+  adminMembers.forEach((m,i)=>{ data[`m${i}`]=m; });
+  fbDb.ref(DB_MEMBERS).set(data).catch(e=>console.warn("members save failed",e));
+}
+
+function calcBasePoint(answers){
+  let total = 0;
+  ADMIN_CONFIG.questions.forEach(q => {
+    const idx = answers[q.id];
+    if(idx !== undefined && q.choices[idx]) total += Number(q.choices[idx].pt || 0);
+  });
+  return total;
+}
+function getPointRecord(name){
+  const raw = manualPoints[name];
+  if(raw && typeof raw === 'object') return { main:Number(raw.main||0), svs:Number(raw.svs||0) };
+  // 旧形式の数値データが残っていた場合の互換
+  return { main:Number(raw||0), svs:0 };
+}
+function getMainPoint(name){ return getPointRecord(name).main; }
+function getSvsPoint(name){ return getPointRecord(name).svs; }
+function getManualPoint(name){ const p=getPointRecord(name); return p.main + p.svs; }
+function calcTotalPoint(sub){ return calcBasePoint(sub.answers || {}) + getManualPoint(sub.name); }
+function choiceText(qid, answers){
+  const q = ADMIN_CONFIG.questions.find(x=>x.id===qid);
+  if(!q) return "";
+  const idx = answers[qid];
+  return q.choices[idx] ? q.choices[idx].text : "";
+}
+
+
+// ===================================================
+// 一般公開状態制御
+// ===================================================
+function sameLocalDate(a,b){
+  if(!a || !b) return false;
+  const da = new Date(a), db = new Date(b);
+  return da.getFullYear()===db.getFullYear()
+    && da.getMonth()===db.getMonth()
+    && da.getDate()===db.getDate();
+}
+function getPublicState(){
+  if(PUBLIC_SURVEY.status === 'open') return 'open';
+  if(PUBLIC_SURVEY.status === 'published') return 'published';
+  if(PUBLIC_SURVEY.status === 'closed' && sameLocalDate(PUBLIC_SURVEY.endedAt, new Date())) return 'closed_today';
+  return 'none';
+}
+function isSurveyOpen(){ return getPublicState() === 'open'; }
+function applyPublicSurveyState(){
+  const state = getPublicState();
+  const overlay = document.getElementById('stateOverlay');
+  const reg = document.getElementById('registerOverlay');
+  document.body.classList.toggle('public-locked', state !== 'open');
+
+  if(state === 'open'){
+    overlay.classList.remove('open');
+    // 未登録なら通常どおり参加登録を出す
+    if(!userName && reg) reg.style.display = 'flex';
+    return;
+  }
+
+  if(reg) reg.style.display = 'none';
+  overlay.classList.add('open');
+
+  if(state === 'closed_today'){
+    document.getElementById('stateIcon').textContent = '⏰';
+    document.getElementById('stateTitle').textContent = '今回のアンケートは終了しました。';
+    document.getElementById('stateMessage').textContent = '結果発表までお待ちください。一般メンバーは回答・変更できません。';
+  }else if(state === 'published'){
+    document.getElementById('stateIcon').textContent = '📋';
+    document.getElementById('stateTitle').textContent = '結果公開中です。';
+    document.getElementById('stateMessage').textContent = '確定表を確認してください。変更は管理者のみ可能です。';
+  }else{
+    document.getElementById('stateIcon').textContent = 'ℹ️';
+    document.getElementById('stateTitle').textContent = '現在実施中のアンケートはありません。';
+    document.getElementById('stateMessage').textContent = '募集が開始されるまでお待ちください。一般メンバーは操作できません。';
+  }
+}
+
+// ===================================================
+// 役職タブ
+// ===================================================
+function buildRoleTabs(){
+  const tabs = document.getElementById('roleTabs');
+  tabs.innerHTML = '';
+  ADMIN_CONFIG.activeRoles.forEach((role, i) => {
+    const cfg = ROLE_CONFIG[role];
+    const tab = document.createElement('div');
+    tab.className = `role-tab${i===0?' active-'+cfg.color:''}`;
+    tab.dataset.role = role;
+    tab.textContent = `${cfg.icon} ${role}`;
+    // 回答者はタブ切り替え不可（見えるだけ）
+    tab.style.cursor = 'default';
+    tab.style.opacity = i===0 ? '1' : '0.4';
+    tabs.appendChild(tab);
+  });
+}
+
+function switchRole(role){
+  currentRole = role;
+  const cfg = ROLE_CONFIG[role];
+  document.querySelectorAll('.role-tab').forEach(t => {
+    t.className = 'role-tab' + (t.dataset.role===role?' active-'+cfg.color:'');
+  });
+  renderSeats();
+}
+
+// ===================================================
+// 登録画面
+// ===================================================
+function buildQuestions(){
+  const area = document.getElementById('questionsArea');
+  area.innerHTML = '';
+  ADMIN_CONFIG.questions.forEach(q => {
+    const sec = document.createElement('div');
+    sec.className = 'reg-section';
+    sec.innerHTML = `<label class="reg-label">${q.label}</label>
+      <div class="choice-grid" id="cg_${q.id}">
+        ${q.choices.map((c,i)=>
+          `<div class="choice-btn" data-qid="${q.id}" data-idx="${i}" onclick="selectChoice(this)">${c.text}</div>`
+        ).join('')}
+      </div>`;
+    area.appendChild(sec);
+  });
+}
+
+function selectChoice(el){
+  const qid = el.dataset.qid;
+  document.querySelectorAll(`#cg_${qid} .choice-btn`).forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  userAnswers[qid] = parseInt(el.dataset.idx);
+}
+
+function startReservation(){
+  if(!isSurveyOpen()) return;
+  const name = document.getElementById('regName').value.trim();
+  const err = document.getElementById('regErr');
+  if(!name){ err.textContent='ゲーム内ネームを入力してください'; return; }
+  const unanswered = ADMIN_CONFIG.questions.find(q=>userAnswers[q.id]===undefined);
+  if(unanswered){ err.textContent=`「${unanswered.label}」を選択してください`; return; }
+  err.textContent='';
+  userName = name;
+  document.getElementById('userName').textContent = '👤 ' + name;
+  document.getElementById('registerOverlay').style.display = 'none';
+  renderSeats();
+}
+
+function showRegister(){
+  if(!isSurveyOpen()) return;
+  document.getElementById('regName').value = userName;
+  document.getElementById('registerOverlay').style.display = 'flex';
+}
+
+// ===================================================
+// お任せ
+// ===================================================
+function toggleOmakase(){
+  if(!isSurveyOpen()) return;
+  if(submitted) return;
+  isOmakase = !isOmakase;
+  const banner = document.getElementById('omakaseBanner');
+  const check = document.getElementById('omakaseCheck');
+  if(isOmakase){
+    banner.classList.add('selected');
+    check.textContent = '✓';
+    // 既存の希望をクリア
+    resetReservations();
+  } else {
+    banner.classList.remove('selected');
+    check.textContent = '';
+  }
+  renderSeats();
+  renderSummary();
+  updateDecideBtn();
+}
+
+function resetReservations(){
+  ADMIN_CONFIG.activeRoles.forEach(role => {
+    ALL_SLOTS.forEach(t => {
+      [0,1,2].forEach(i => {
+        if(isMe[role][t][i]){
+          seats[role][t][i] = 0;
+          isMe[role][t][i] = false;
+        }
+      });
+    });
+  });
+  myReservations[1]=null; myReservations[2]=null; myReservations[3]=null;
+}
+
+// ===================================================
+// 座席表
+// ===================================================
+function isFull(role, time){ return seats[role][time].every(p=>p>0); }
+function getOpenCount(role, time){ return seats[role][time].filter(p=>p===0).length; }
+function getMySlotIdx(role, time){ return isMe[role][time].indexOf(true); }
+
+function renderSeats(){
+  const container = document.getElementById('seatContainer');
+  container.innerHTML = '';
+
+  const amH = document.createElement('div');
+  amH.className = 'block-header';
+  amH.textContent = '── 昼帯  9:00 〜 20:30 ──';
+  container.appendChild(amH);
+  AM_SLOTS.forEach(t => container.appendChild(makeRow(t)));
+
+  const pmH = document.createElement('div');
+  pmH.className = 'block-header';
+  pmH.textContent = '── 夜帯 21:00 〜  8:30 ──';
+  container.appendChild(pmH);
+  PM_SLOTS.forEach(t => container.appendChild(makeRow(t)));
+
+  renderSummary();
+}
+
+function makeRow(time){
+  const row = document.createElement('div');
+  row.className = 'time-row';
+
+  const label = document.createElement('div');
+  label.className = 'time-label';
+  label.textContent = time;
+  row.appendChild(label);
+
+  const full = isFull(currentRole, time);
+  const mySlotIdx = getMySlotIdx(currentRole, time);
+  const openCount = getOpenCount(currentRole, time);
+
+  const block = document.createElement('div');
+  block.className = 'time-block'
+    + (full && mySlotIdx===-1 ? ' full' : '')
+    + (isOmakase ? ' omakase-mode' : '');
+
+  // スロットインジケーター（番号なし・色だけ）
+  const indicators = document.createElement('div');
+  indicators.className = 'slot-indicators';
+  [0,1,2].forEach(i => {
+    const dot = document.createElement('div');
+    const pref = seats[currentRole][time][i];
+    const mine = isMe[currentRole][time][i];
+    dot.className = 'slot-dot'
+      + (pref===0 ? ' open' : ` taken-${pref}`)
+      + (mine ? ' my' : '');
+    indicators.appendChild(dot);
+  });
+  block.appendChild(indicators);
+
+  if(full && mySlotIdx===-1){
+    const fullLabel = document.createElement('div');
+    fullLabel.className = 'full-label';
+    fullLabel.textContent = '満';
+    block.appendChild(fullLabel);
+  } else if(mySlotIdx >= 0){
+    const badge = document.createElement('div');
+    badge.className = 'my-badge';
+    badge.textContent = `第${seats[currentRole][time][mySlotIdx]}希望`;
+    block.appendChild(badge);
+  } else if(!full){
+    const badge = document.createElement('div');
+    badge.className = 'open-count';
+    badge.textContent = `残${openCount}`;
+    block.appendChild(badge);
+  }
+
+  if(!isOmakase && !(full && mySlotIdx===-1)){
+    block.onclick = () => openPopup(time, mySlotIdx);
+  }
+
+  row.appendChild(block);
+  return row;
+}
+
+// ===================================================
+// ポップアップ
+// ===================================================
+function openPopup(time, mySlotIdx){
+  if(!isSurveyOpen()) return;
+  if(submitted) return;
+  popupTarget = {time, selectedPref:null};
+
+  document.getElementById('popupTitle').textContent = `${currentRole}　${time}`;
+
+  const existingPref = mySlotIdx >= 0 ? seats[currentRole][time][mySlotIdx] : null;
+
+  [1,2,3].forEach(p => {
+    const btn = document.getElementById(`prefBtn${p}`);
+    btn.className = 'pref-btn';
+    if(existingPref === p){
+      btn.classList.add(`sel-${p}`);
+      popupTarget.selectedPref = p;
+    }
+    const used = myReservations[p] && !(myReservations[p].role===currentRole && myReservations[p].time===time);
+    if(used) btn.classList.add('disabled');
+  });
+
+  const btnRemove = document.getElementById('btnRemove');
+  btnRemove.style.display = existingPref ? 'block' : 'none';
+  document.getElementById('btnConfirm').className = popupTarget.selectedPref ? 'btn-confirm active' : 'btn-confirm';
+  document.getElementById('popupSub').textContent =
+    existingPref ? `現在 第${existingPref}希望で予約中` : '希望順位を選択してください';
+
+  document.getElementById('popupOverlay').classList.add('open');
+}
+
+function selectPref(p){
+  const btn = document.getElementById(`prefBtn${p}`);
+  if(btn.classList.contains('disabled')) return;
+  [1,2,3].forEach(n => {
+    const b = document.getElementById(`prefBtn${n}`);
+    if(!b.classList.contains('disabled')) b.className = 'pref-btn';
+  });
+  btn.classList.add(`sel-${p}`);
+  popupTarget.selectedPref = p;
+  document.getElementById('btnConfirm').className = 'btn-confirm active';
+}
+
+function confirmPref(){
+  const {time, selectedPref} = popupTarget;
+  if(!selectedPref) return;
+  const role = currentRole;
+
+  if(myReservations[selectedPref]){
+    const old = myReservations[selectedPref];
+    const oldIdx = isMe[old.role][old.time].indexOf(true);
+    if(oldIdx>=0){ seats[old.role][old.time][oldIdx]=0; isMe[old.role][old.time][oldIdx]=false; }
+  }
+  const prevIdx = isMe[role][time].indexOf(true);
+  if(prevIdx>=0){
+    const prevPref = seats[role][time][prevIdx];
+    myReservations[prevPref]=null;
+    seats[role][time][prevIdx]=0; isMe[role][time][prevIdx]=false;
+  }
+  const nextOpen = seats[role][time].indexOf(0);
+  if(nextOpen===-1){ closePopup(); return; }
+  seats[role][time][nextOpen]=selectedPref;
+  isMe[role][time][nextOpen]=true;
+  myReservations[selectedPref]={role, time, slotIdx:nextOpen};
+
+  closePopup();
+  renderSeats();
+  updateDecideBtn();
+}
+
+function removePref(){
+  const {time} = popupTarget;
+  const role = currentRole;
+  const idx = isMe[role][time].indexOf(true);
+  if(idx>=0){
+    const pref = seats[role][time][idx];
+    myReservations[pref]=null;
+    seats[role][time][idx]=0; isMe[role][time][idx]=false;
+  }
+  closePopup();
+  renderSeats();
+  updateDecideBtn();
+}
+
+function overlayClick(e){
+  if(e.target===document.getElementById('popupOverlay')) closePopup();
+}
+function closePopup(){
+  document.getElementById('popupOverlay').classList.remove('open');
+}
+
+// ===================================================
+// サマリー・決定ボタン
+// ===================================================
+function renderSummary(){
+  const items = document.getElementById('summaryItems');
+  items.innerHTML = '';
+
+  if(isOmakase){
+    const div = document.createElement('div');
+    div.className = 'summary-item omakase';
+    div.style.gridColumn = '1/-1';
+    div.innerHTML = `<div style="font-weight:900;font-size:13px">🤝 時間帯はお任せ</div>`;
+    items.style.display = 'block';
+    items.appendChild(div);
+    document.getElementById('userStatus').textContent = 'お任せ選択中';
+  } else {
+    items.style.display = 'flex';
+    [1,2,3].forEach(p => {
+      const div = document.createElement('div');
+      const r = myReservations[p];
+      if(r){
+        div.className = `summary-item p${p}`;
+        div.innerHTML = `<div style="font-size:9px;margin-bottom:2px">第${p}希望</div><div class="summary-time">${r.time}</div><div style="font-size:9px">${r.role}</div>`;
+      } else {
+        div.className = 'summary-item empty-slot';
+        div.innerHTML = `第${p}希望<br><span style="font-size:10px">未選択</span>`;
+      }
+      items.appendChild(div);
+    });
+    const filled = Object.values(myReservations).filter(v=>v).length;
+    document.getElementById('userStatus').textContent =
+      filled===0 ? '未回答' : filled===3 ? '3希望完了 ✓' : `${filled}/3 選択中`;
+  }
+}
+
+function updateDecideBtn(){
+  const filled = Object.values(myReservations).filter(v=>v).length;
+  const canDecide = isOmakase || filled === 3;
+  const btn = document.getElementById('btnDecide');
+  btn.className = canDecide ? 'btn-decide active' : 'btn-decide';
+}
+
+function resetAll(){
+  if(!isSurveyOpen()) return;
+  if(submitted) return;
+  isOmakase = false;
+  document.getElementById('omakaseBanner').classList.remove('selected');
+  document.getElementById('omakaseCheck').textContent = '';
+  resetReservations();
+  renderSeats();
+  updateDecideBtn();
+}
+
+// ===================================================
+// 決定・完了
+// ===================================================
+function showConfirm(){
+  if(!isSurveyOpen()) return;
+  const filled = Object.values(myReservations).filter(v=>v).length;
+  const canDecide = isOmakase || filled===3;
+  if(!canDecide) return;
+
+  // 完了画面の内容を生成
+  const detail = document.getElementById('completeDetail');
+  detail.innerHTML = '';
+
+  if(isOmakase){
+    detail.innerHTML = `<div class="complete-detail-row"><span>回答</span><span style="color:#86efac">時間帯はお任せ</span></div>`;
+  } else {
+    [1,2,3].forEach(p => {
+      const r = myReservations[p];
+      if(r){
+        const row = document.createElement('div');
+        row.className = 'complete-detail-row';
+        row.innerHTML = `<span>第${p}希望</span><span style="color:${['','#fde68a','#93c5fd','#c4b5fd'][p]}">${r.role}　${r.time}</span>`;
+        detail.appendChild(row);
+      }
+    });
+  }
+
+  // 加速情報
+  ADMIN_CONFIG.questions.forEach(q => {
+    if(userAnswers[q.id] !== undefined){
+      const row = document.createElement('div');
+      row.className = 'complete-detail-row';
+      row.innerHTML = `<span>${q.label}</span><span>${q.choices[userAnswers[q.id]].text}</span>`;
+      detail.appendChild(row);
+    }
+  });
+
+  submitted = true;
+
+  // 回答をFirebaseに保存
+  const record = {
+    name: userName,
+    surveyId: currentSurveyId,
+    answers: JSON.parse(JSON.stringify(userAnswers)),
+    omakase: isOmakase,
+    reservations: JSON.parse(JSON.stringify(myReservations)),
+    createdAt: new Date().toISOString()
+  };
+  const safeKey = userName.replace(/[.#$\[\]]/g,'_');
+  if(fbDb){
+    fbDb.ref(`${DB_SUBMISSIONS}/${currentSurveyId}/${safeKey}`).set(record)
+      .then(()=>console.log("submission saved"))
+      .catch(e=>console.warn("submission save failed", e));
+    // 座席データも更新
+    saveSeatsToDB();
+  } else {
+    // オフライン：ローカルに保存
+    const existingIdx = submissions.findIndex(s=>s.name===userName);
+    if(existingIdx >= 0) submissions[existingIdx] = record;
+    else submissions.push(record);
+  }
+
+  document.getElementById('completeOverlay').classList.add('open');
+}
+
+function closeComplete(){
+  document.getElementById('completeOverlay').classList.remove('open');
+}
+
+
+
+// ===================================================
+// 管理者：加点・集計・投稿文
+// ===================================================
+const ADMIN_PASSWORD = "1648"; // 仮パス。Firebase接続後はサーバー側/DB側で管理推奨
+let adminLoggedIn = false;
+
+function openAdmin(){
+  if(!adminLoggedIn){
+    document.getElementById('adminLoginErr').textContent = '';
+    document.getElementById('adminPasswordInput').value = '';
+    document.getElementById('adminLoginOverlay').classList.add('open');
+    setTimeout(()=>document.getElementById('adminPasswordInput').focus(), 50);
+    return;
+  }
+  openAdminPanel();
+}
+function openAdminPanel(){
+  renderPriorityList();
+  buildResults();
+  renderAdminMembers();
+  renderAdminQuestions();
+  document.getElementById('adminScreen').classList.add('open');
+}
+function loginAdmin(){
+  const input = document.getElementById('adminPasswordInput').value.trim();
+  if(input !== ADMIN_PASSWORD){
+    document.getElementById('adminLoginErr').textContent = 'パスワードが違います';
+    return;
+  }
+  adminLoggedIn = true;
+  closeAdminLogin();
+  openAdminPanel();
+}
+function closeAdminLogin(){ document.getElementById('adminLoginOverlay').classList.remove('open'); }
+function adminLoginOverlayClick(e){ if(e.target===document.getElementById('adminLoginOverlay')) closeAdminLogin(); }
+function closeAdmin(){
+  document.getElementById('adminScreen').classList.remove('open');
+}
+function switchAdminTab(el){
+  const tab = el.dataset.atab;
+  document.querySelectorAll('.admin-tab').forEach(t=>t.classList.toggle('active', t.dataset.atab===tab));
+  document.querySelectorAll('.admin-page').forEach(p=>p.classList.toggle('active', p.id==='apage-'+tab));
+  if(tab==='result') buildResults();
+  if(tab==='post') buildPostText();
+  if(tab==='members') renderAdminMembers();
+  if(tab==='settings') renderAdminQuestions();
+}
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+// 管理者メンバー管理
+let adminMembers = [];
+function renderAdminMembers(){
+  const list = document.getElementById('adminMemberList');
+  if(!list) return;
+  list.innerHTML = '';
+  if(!adminMembers.length){
+    list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:12px">メンバーがいません</div>';
+    return;
+  }
+  adminMembers.forEach((m, i) => {
+    const div = document.createElement('div');
+    div.className = 'member-row';
+    div.innerHTML = `
+      <div class="member-name">${m.name}</div>
+      <button class="admin-btn sm ${m.isServer?'gold':''}" onclick="toggleAdminServerRally(${i})" style="font-size:11px;min-width:48px">★代表</button>
+      <button class="admin-btn sm ${m.isAlly?'green':''}" onclick="toggleAdminAllyRally(${i})" style="font-size:11px;min-width:48px">●集結</button>
+      <div class="svs-stepper">
+        <button class="step-btn" onclick="changeAdminSvs(${i},-1)">−</button>
+        <div class="svs-val">${m.svsPt||0}</div>
+        <button class="step-btn" onclick="changeAdminSvs(${i},1)">＋</button>
+      </div>
+      <button class="admin-btn red sm" style="padding:0;width:30px" onclick="removeAdminMember(${i})">✕</button>
+    `;
+    list.appendChild(div);
+  });
+}
+function addAdminMember(){
+  const name = document.getElementById('newMemberName').value.trim();
+  if(!name){ return; }
+  adminMembers.push({name, isServer:false, isAlly:false, svsPt:0});
+  document.getElementById('newMemberName').value='';
+  renderAdminMembers();
+  saveMembersToDB();
+}
+function removeAdminMember(i){ adminMembers.splice(i,1); renderAdminMembers(); saveMembersToDB(); }
+function toggleAdminServerRally(i){ adminMembers[i].isServer=!adminMembers[i].isServer; if(adminMembers[i].isServer)adminMembers[i].isAlly=false; renderAdminMembers(); saveMembersToDB(); }
+function toggleAdminAllyRally(i){ adminMembers[i].isAlly=!adminMembers[i].isAlly; if(adminMembers[i].isAlly)adminMembers[i].isServer=false; renderAdminMembers(); saveMembersToDB(); }
+function changeAdminSvs(i,d){ adminMembers[i].svsPt=Math.max(0,Math.min(3,(adminMembers[i].svsPt||0)+d)); renderAdminMembers(); saveMembersToDB(); }
+
+// 管理者質問編集
+function renderAdminQuestions(){
+  const list = document.getElementById('adminQuestionList');
+  if(!list) return;
+  list.innerHTML = '';
+  const ptColors = ['#f59e0b','#60a5fa','#a78bfa','#6b7280'];
+  ADMIN_CONFIG.questions.forEach((q, qi) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;';
+    div.innerHTML = `
+      <div class="admin-row" style="margin-bottom:10px">
+        <input class="admin-input admin-fl" value="${q.label}" onchange="ADMIN_CONFIG.questions[${qi}].label=this.value">
+        <button class="admin-btn red sm" onclick="removeAdminQuestion(${qi})">削除</button>
+      </div>
+      ${q.choices.map((c,ci)=>`
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;background:${ptColors[ci]}22;border:1px solid ${ptColors[ci]};color:${ptColors[ci]};flex-shrink:0">+${c.pt}</div>
+          <input class="admin-input" style="flex:1;height:34px;font-size:12px" value="${c.text}" onchange="ADMIN_CONFIG.questions[${qi}].choices[${ci}].text=this.value">
+          <input type="number" class="admin-input" style="width:52px;height:34px;font-size:12px;text-align:center" value="${c.pt}" min="0" max="9"
+            onchange="ADMIN_CONFIG.questions[${qi}].choices[${ci}].pt=parseInt(this.value)||0;renderAdminQuestions()">
+        </div>`).join('')}
+    `;
+    list.appendChild(div);
+  });
+}
+function addAdminQuestion(){
+  ADMIN_CONFIG.questions.push({id:'q'+(Date.now()),label:'新しい質問',choices:[
+    {text:'選択肢1',pt:3},{text:'選択肢2',pt:2},{text:'選択肢3',pt:1},{text:'選択肢4',pt:0}
+  ]});
+  renderAdminQuestions();
+  saveConfigToDB();
+}
+function removeAdminQuestion(i){
+  if(!confirm('この質問を削除しますか？')) return;
+  ADMIN_CONFIG.questions.splice(i,1);
+  renderAdminQuestions();
+  saveConfigToDB();
+}
+
+// 設定
+function saveRoleSettings(){
+  ADMIN_CONFIG.activeRoles = [];
+  ['副執政官','教育部長'].forEach(r=>{
+    if(document.getElementById('tog-'+r)?.checked) ADMIN_CONFIG.activeRoles.push(r);
+  });
+  buildRoleTabs();
+  saveConfigToDB();
+}
+function setDeadlineMode(mode){
+  document.getElementById('seg-auto').classList.toggle('on', mode==='auto');
+  document.getElementById('seg-manual').classList.toggle('on', mode==='manual');
+  document.getElementById('deadline-auto-area').style.display = mode==='auto'?'':'none';
+  document.getElementById('deadline-manual-area').style.display = mode==='manual'?'':'none';
+}
+function saveDeadline(){
+  const v = document.getElementById('deadlineInput').value;
+  if(!v){ alert('日時を選択してください'); return; }
+  alert('締切を設定しました：'+v.replace('T',' '));
+}
+function manualClose(){
+  if(!confirm('今すぐアンケートを締め切りますか？')) return;
+  PUBLIC_SURVEY.status = 'closed';
+  PUBLIC_SURVEY.endedAt = new Date().toISOString();
+  const badge = document.getElementById('adminStatusBadge');
+  if(badge){ badge.textContent='締切済'; badge.style.color='#f59e0b'; }
+  if(fbDb){
+    fbDb.ref(DB_SURVEY).update({status:'closed', endedAt:PUBLIC_SURVEY.endedAt})
+      .catch(e=>console.warn("survey close failed",e));
+  }
+  applyPublicSurveyState();
+}
+
+function getLatestClosedSurvey(){
+  const closed = surveys.filter(s=>s.status === 'closed' && s.endedAt);
+  if(!closed.length) return null;
+  closed.sort((a,b)=>String(b.endedAt).localeCompare(String(a.endedAt)));
+  return closed[0];
+}
+function getTargetSubmissions(){
+  const survey = getLatestClosedSurvey();
+  if(!survey) return [];
+  return submissions.filter(s=>!s.surveyId || s.surveyId === survey.id);
+}
+function getTargetSurveyLabel(){
+  const survey = getLatestClosedSurvey();
+  if(!survey) return '終了済みアンケートなし';
+  const date = survey.endedAt ? new Date(survey.endedAt).toLocaleString('ja-JP', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+  return `${survey.title || '直近アンケート'}${date ? ' / 終了: '+date : ''}`;
+}
+
+
+function getApplicantNames(){
+  const set = new Set();
+  getTargetSubmissions().forEach(s => { if(s.name) set.add(s.name); });
+  Object.keys(manualPoints).forEach(n => set.add(n));
+  return Array.from(set).sort((a,b)=>a.localeCompare(b,'ja'));
+}
+function getSubmissionByName(name){
+  return getTargetSubmissions().find(s => s.name === name) || null;
+}
+function renderPriorityList(){
+  const box = document.getElementById('priorityList');
+  box.innerHTML = `<div class="poll-scope-note">対象：${escapeHtml(getTargetSurveyLabel())}<br>固定情報は確認用です。変更できるのは下のプルダウンだけです。</div>`;
+  const names = getApplicantNames();
+  if(names.length===0){
+    box.innerHTML += '<div class="empty-admin">終了済みの直近アンケートに申請データがありません。<br>投稿文もこのアンケートだけを対象にします。</div>';
+    return;
+  }
+  names.forEach(name=>{
+    const sub = getSubmissionByName(name);
+    const base = sub ? calcBasePoint(sub.answers||{}) : 0;
+    const mainPt = getMainPoint(name);
+    const svsPt = getSvsPoint(name);
+    const manual = mainPt + svsPt;
+    const total = base + manual;
+    const accel = sub ? choiceText('q1', sub.answers||{}) : '申請なし';
+    let prefText = '希望なし';
+    if(sub && sub.omakase){
+      prefText = '時間帯はお任せ';
+    }else if(sub && sub.reservations){
+      prefText = [1,2,3].map(p=>{
+        const r = sub.reservations[p];
+        return r ? `第${p}:${r.role} ${r.time}` : `第${p}:未選択`;
+      }).join(' / ');
+    }
+    const safeName = escapeAttr(name);
+    const row = document.createElement('div');
+    row.className = 'applicant-row';
+    row.innerHTML = `
+      <div class="applicant-main">
+        <div>
+          <div class="applicant-name">${escapeHtml(name)}</div>
+          <div class="applicant-meta">${escapeHtml(accel)} / ${escapeHtml(prefText)}</div>
+        </div>
+        <div class="applicant-total">${total>=0?'+':''}${total}pt</div>
+      </div>
+      <div class="point-controls">
+        <div class="point-field">
+          <div class="point-label">主ポイント</div>
+          <select class="point-select" onchange="setMainPoint('${safeName}', this.value)">
+            <option value="0" ${mainPt===0?'selected':''}>未設定 ±0</option>
+            <option value="1" ${mainPt===1?'selected':''}>準集結主 +1</option>
+            <option value="2" ${mainPt===2?'selected':''}>集結主 +2</option>
+          </select>
+        </div>
+        <div class="point-field">
+          <div class="point-label">SVS貢献度</div>
+          <select class="point-select" onchange="setSvsPoint('${safeName}', this.value)">
+            <option value="0" ${svsPt===0?'selected':''}>0ポイント</option>
+            <option value="1" ${svsPt===1?'selected':''}>1ポイント</option>
+            <option value="2" ${svsPt===2?'selected':''}>2ポイント</option>
+            <option value="3" ${svsPt===3?'selected':''}>3ポイント</option>
+          </select>
+        </div>
+      </div>
+      <div class="point-detail">
+        <div class="point-pill">加速 ${base>=0?'+':''}${base}</div>
+        <div class="point-pill">主 ${mainPt>=0?'+':''}${mainPt}</div>
+        <div class="point-pill">SVS ${svsPt>=0?'+':''}${svsPt}</div>
+        <div class="point-pill">合計 ${total>=0?'+':''}${total}</div>
+      </div>`;
+    box.appendChild(row);
+  });
+}
+function setMainPoint(name, val){
+  const p = getPointRecord(name);
+  p.main = Number(val || 0);
+  manualPoints[name] = p;
+  renderPriorityList();
+  buildResults();
+}
+function setSvsPoint(name, val){
+  const p = getPointRecord(name);
+  p.svs = Number(val || 0);
+  manualPoints[name] = p;
+  renderPriorityList();
+  buildResults();
+}
+function setManualPoint(name, val){ setMainPoint(name, val); }
+function clearManualPoints(){
+  manualPoints = {};
+  renderPriorityList();
+  buildResults();
+}
+
+function generateDemoSubmissions(){
+  const demo = [
+    {name:'やっすー', accel:0, role:'教育部長', p1:'18:00', p2:'18:30', p3:'19:00'},
+    {name:'ひろころ', accel:1, role:'教育部長', p1:'18:00', p2:'19:00', p3:'19:30'},
+    {name:'Dすけ', accel:1, role:'教育部長', p1:'18:00', p2:'18:30', p3:'20:00'},
+    {name:'Kさん', accel:0, role:'教育部長', p1:'18:30', p2:'19:00', p3:'20:00'},
+    {name:'こっすぃー', accel:2, role:'教育部長', p1:'19:00', p2:'18:30', p3:'20:30'},
+  ];
+  demo.forEach(d=>{
+    const rec = {
+      name:d.name,
+      surveyId: currentSurveyId,
+      answers:{q1:d.accel},
+      omakase:false,
+      reservations:{
+        1:{role:d.role,time:d.p1},
+        2:{role:d.role,time:d.p2},
+        3:{role:d.role,time:d.p3},
+      },
+      createdAt:new Date().toISOString()
+    };
+    const idx = submissions.findIndex(s=>s.name===d.name);
+    if(idx>=0) submissions[idx]=rec; else submissions.push(rec);
+  });
+  renderPriorityList();
+  buildResults();
+  switchAdminTab('priority');
+}
+
+function candidateFromSubmission(sub, pref){
+  const r = sub.reservations && sub.reservations[pref];
+  if(!r) return null;
+  return {
+    id: sub.id || sub.name,
+    name: sub.name,
+    role: r.role,
+    time: r.time,
+    pref,
+    basePt:calcBasePoint(sub.answers||{}),
+    manualPt:getManualPoint(sub.name),
+    totalPt:calcTotalPoint(sub),
+    accel:choiceText('q1', sub.answers||{}),
+    createdAt:sub.createdAt || ''
+  };
+}
+
+// ポイント+回答順の比較
+function compareByPt(a, b){
+  const at = calcTotalPoint(a), bt = calcTotalPoint(b);
+  if(bt !== at) return bt - at;
+  return String(a.createdAt||'').localeCompare(String(b.createdAt||''));
+}
+
+// 候補比較（ポイント→回答順）
+function compareCandidates(a, b){
+  if(b.totalPt !== a.totalPt) return b.totalPt - a.totalPt;
+  return String(a.createdAt||'').localeCompare(String(b.createdAt||''));
+}
+
+// 希望時間に近い順に空きスロットを探す
+function findNearestSlot(targetTime, role, filledSlots){
+  const idx = ALL_SLOTS.indexOf(targetTime);
+  if(idx === -1) return null;
+  // 近い順：±1, ±2, ±3 ... と広げていく
+  for(let d = 1; d < ALL_SLOTS.length; d++){
+    for(const delta of [d, -d]){
+      const ni = idx + delta;
+      if(ni < 0 || ni >= ALL_SLOTS.length) continue;
+      const key = `${role}|${ALL_SLOTS[ni]}`;
+      if(!filledSlots.has(key)) return ALL_SLOTS[ni];
+    }
+  }
+  return null;
+}
+
+function buildFinalAssignments(){
+  const MAX_SLOTS = 48;
+
+  // ① 全回答者をポイント→回答順でソート → 上位48名が対象
+  const allSubs = getTargetSubmissions();
+  const sorted = [...allSubs].sort(compareByPt);
+  const targetSubs = sorted.slice(0, MAX_SLOTS);
+  const benchSubs  = sorted.slice(MAX_SLOTS);
+
+  const assignedUsers = new Set(); // 確定済みユーザー
+  const filledSlots   = new Set(); // 確定済みスロット
+  const winners       = [];
+  const candidateMap  = {}; // 管理確認用
+
+  function uid(sub){ return sub.id || sub.name; }
+
+  function addWinner(c, sub){
+    const key = `${c.role}|${c.time}`;
+    winners.push(c);
+    filledSlots.add(key);
+    assignedUsers.add(uid(sub));
+  }
+
+  function preferredRole(sub){
+    if(sub.reservations){
+      for(const p of [1,2,3]){
+        const r = sub.reservations[p];
+        if(r && r.role) return r.role;
+      }
+    }
+    return currentRole || ADMIN_CONFIG.activeRoles[0] || '';
+  }
+
+  function makeCandidate(sub, pref){
+    const r = sub.reservations && sub.reservations[pref];
+    if(!r) return null;
+    return {
+      name     : sub.name,
+      role     : r.role || preferredRole(sub),
+      time     : r.time,
+      pref,
+      basePt   : calcBasePoint(sub.answers||{}),
+      manualPt : getManualPoint(sub.name),
+      totalPt  : calcTotalPoint(sub),
+      accel    : choiceText('q1', sub.answers||{}),
+      createdAt: sub.createdAt || '',
+    };
+  }
+
+  // 候補マップ（管理確認用）
+  targetSubs.forEach(sub=>{
+    if(sub.omakase) return;
+    [1,2,3].forEach(pref=>{
+      const c = makeCandidate(sub, pref);
+      if(!c) return;
+      const key = `${c.role}|${c.time}`;
+      if(!candidateMap[key]) candidateMap[key] = [];
+      if(!candidateMap[key].find(x=>x.name===c.name)) candidateMap[key].push(c);
+    });
+  });
+
+  // ② 勝ち抜けトーナメント：第1→第2→第3
+  // 各ラウンドで「このラウンドに参加する人」のセットを管理
+  // 確定者の次希望は除外する
+
+  // 第1希望ラウンド
+  // participantsMap: 第N希望に参加する人のSet（uid）
+  let participants = new Set(
+    targetSubs.filter(s=>!s.omakase && !assignedUsers.has(uid(s))).map(uid)
+  );
+
+  for(let pref = 1; pref <= 3; pref++){
+    if(!participants.size) break;
+
+    // このラウンドの各時間帯グループを構築
+    const groups = {};
+    targetSubs.forEach(sub=>{
+      if(!participants.has(uid(sub))) return;
+      if(assignedUsers.has(uid(sub))) return;
+      const c = makeCandidate(sub, pref);
+      if(!c) return;
+      const key = `${c.role}|${c.time}`;
+      if(filledSlots.has(key)) return; // 埋まっている枠はスキップ（次ラウンドで近隣割り当て）
+      if(!groups[key]) groups[key] = [];
+      groups[key].push({sub, c});
+    });
+
+    // 各グループでポイント順に1名確定
+    const winners_this_round = new Set();
+    Object.entries(groups).forEach(([key, items])=>{
+      if(filledSlots.has(key)) return;
+      items.sort((a,b)=>compareCandidates(a.c, b.c));
+      const {sub, c} = items[0];
+      addWinner(c, sub);
+      winners_this_round.add(uid(sub));
+    });
+
+    // 次のラウンドの参加者：
+    // 今ラウンドで負けた人（確定していない、かつ参加していた人）
+    // 確定者はparticipantsから外す（次希望を除外）
+    const nextParticipants = new Set();
+    participants.forEach(id=>{
+      if(!assignedUsers.has(id)) nextParticipants.add(id);
+    });
+    participants = nextParticipants;
+  }
+
+  // ③ 第3まで負けた人 → 最後の希望時間（第3→第2→第1の順）に近い空きスロットへ
+  const losers = targetSubs.filter(sub=>!sub.omakase && !assignedUsers.has(uid(sub)));
+  losers.sort(compareByPt); // ポイント順
+
+  losers.forEach(sub=>{
+    const role = preferredRole(sub);
+    // 最後に希望した時間（第3→第2→第1の順で取得）
+    let baseTime = null;
+    for(const p of [3,2,1]){
+      const r = sub.reservations && sub.reservations[p];
+      if(r && r.time){ baseTime = r.time; break; }
+    }
+    const time = baseTime
+      ? findNearestSlot(baseTime, role, filledSlots)
+      : ALL_SLOTS.find(t=>!filledSlots.has(`${role}|${t}`));
+    if(!time) return;
+    const c = {
+      name     : sub.name,
+      role, time,
+      pref     : 4, // 自動割当
+      basePt   : calcBasePoint(sub.answers||{}),
+      manualPt : getManualPoint(sub.name),
+      totalPt  : calcTotalPoint(sub),
+      accel    : choiceText('q1', sub.answers||{}),
+      createdAt: sub.createdAt || '',
+    };
+    addWinner(c, sub);
+  });
+
+  // ④ お任せ → ポイント順でランダム空き枠に割り当て
+  const omakaseSubs = targetSubs
+    .filter(sub=>sub.omakase && !assignedUsers.has(uid(sub)))
+    .sort(compareByPt);
+
+  // ランダム空き枠リストを作成（シャッフル）
+  const emptySlots = ALL_SLOTS.filter(t=>{
+    const role = preferredRole(omakaseSubs[0] || {});
+    return !filledSlots.has(`${role}|${t}`);
+  });
+  // Fisher-Yatesシャッフル
+  for(let i = emptySlots.length-1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i+1));
+    [emptySlots[i], emptySlots[j]] = [emptySlots[j], emptySlots[i]];
+  }
+
+  omakaseSubs.forEach((sub, i)=>{
+    const role = preferredRole(sub);
+    const time = emptySlots[i];
+    if(!time) return;
+    const c = {
+      name     : sub.name,
+      role, time,
+      pref     : 0, // お任せ
+      basePt   : calcBasePoint(sub.answers||{}),
+      manualPt : getManualPoint(sub.name),
+      totalPt  : calcTotalPoint(sub),
+      accel    : choiceText('q1', sub.answers||{}),
+      createdAt: sub.createdAt || '',
+    };
+    addWinner(c, sub);
+  });
+
+  // ⑤ 補欠リスト（48名超）
+  const benchList = benchSubs.map((sub,i)=>({
+    rank    : MAX_SLOTS + i + 1,
+    name    : sub.name,
+    totalPt : calcTotalPoint(sub),
+    accel   : choiceText('q1', sub.answers||{}),
+  }));
+
+  winners.sort((a,b)=>{
+    const r = (a.role||'').localeCompare(b.role||'','ja');
+    if(r!==0) return r;
+    return ALL_SLOTS.indexOf(a.time)-ALL_SLOTS.indexOf(b.time);
+  });
+
+  return {winners, candidateMap, benchList};
+}
+
+function buildResults(){
+  const built = buildFinalAssignments();
+  finalResults = built.winners.map(w=>({
+    role:w.role,
+    time:w.time,
+    winner:w,
+    candidates:(built.candidateMap[`${w.role}|${w.time}`]||[]).sort(compareCandidates)
+  }));
+  benchList = built.benchList || [];
+  renderResultList();
+  buildPostText();
+}
+let benchList = [];
+
+function renderResultList(){
+  const box = document.getElementById('resultList');
+  box.innerHTML = '';
+  if(finalResults.length===0){
+    box.innerHTML = '<div class="admin-card small-note">終了済みの直近アンケートに申請データがありません。</div>';
+    return;
+  }
+
+  const prefLabel = p => p===0?'お任せ':p===4?'自動割当':`第${p}希望`;
+  const prefColor = p => p===1?'var(--p1)':p===2?'var(--p2)':p===3?'var(--p3)':p===0?'#22c55e':'#6b7280';
+
+  finalResults.forEach(g=>{
+    const c = g.winner;
+    const block = document.createElement('div');
+    block.className = 'result-block';
+    block.style.cssText = 'background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;';
+
+    const escLabel = c.escalated ? ' <span style="font-size:10px;color:#f59e0b;border:1px solid #f59e0b;border-radius:4px;padding:1px 5px">繰上</span>' : '';
+    block.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="font-size:15px;font-weight:900;color:var(--gold)">${g.time}</div>
+        <div style="font-size:11px;color:var(--text2)">${g.role}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:rgba(22,101,52,.2);border:1px solid #22c55e">
+        <div style="font-size:11px;font-weight:900;color:#22c55e;padding:2px 7px;border-radius:20px;border:1px solid #22c55e">確定</div>
+        <div style="flex:1;font-size:14px;font-weight:900">${escapeHtml(c.name)}${escLabel}</div>
+        <div style="font-size:11px;color:${prefColor(c.pref)}">${prefLabel(c.pref)}</div>
+        <div style="font-size:14px;font-weight:900;color:var(--gold)">${c.totalPt}pt</div>
+      </div>
+      ${g.candidates.filter(x=>x.winnerId!==c.winnerId).length ? `
+      <div style="margin-top:6px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">補欠候補</div>
+        ${g.candidates.filter(x=>x.winnerId!==c.winnerId).sort(compareCandidates).slice(0,3).map((b,i)=>
+          `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;background:var(--bg3);margin-bottom:3px;font-size:12px">
+            <div style="font-size:10px;color:var(--text3)">補欠${i+1}</div>
+            <div style="flex:1">${escapeHtml(b.name)}</div>
+            <div style="font-size:10px;color:${prefColor(b.pref)}">${prefLabel(b.pref)}</div>
+            <div style="font-size:12px;color:var(--text2)">${b.totalPt}pt</div>
+          </div>`
+        ).join('')}
+      </div>` : ''}
+    `;
+    box.appendChild(block);
+  });
+
+  // 補欠リスト（48名超）
+  if(benchList && benchList.length){
+    const benchBlock = document.createElement('div');
+    benchBlock.style.cssText = 'background:var(--bg2);border:1px solid #7f1d1d;border-radius:12px;padding:12px;margin-top:12px;';
+    benchBlock.innerHTML = `
+      <div style="font-size:13px;font-weight:900;color:#ef4444;margin-bottom:8px">⚠ 48名超過 補欠リスト</div>
+      ${benchList.map(b=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:var(--bg3);margin-bottom:4px;font-size:12px">
+          <div style="font-size:10px;color:var(--text3)">補欠${b.rank}</div>
+          <div style="flex:1">${escapeHtml(b.name)}</div>
+          <div style="font-size:11px;color:var(--text2)">${b.accel}</div>
+          <div style="font-size:12px;color:var(--gold)">${b.totalPt}pt</div>
+        </div>`).join('')}
+    `;
+    box.appendChild(benchBlock);
+  }
+}
+
+function buildPostText(){
+  if(!document.getElementById('postTextPublic')) return;
+  const targetSurvey = getLatestClosedSurvey();
+  if(!targetSurvey){
+    document.getElementById('postTextPublic').value = '終了済みのアンケートがありません。';
+    document.getElementById('postTextAdmin').value = '終了済みのアンケートがありません。';
+    return;
+  }
+  buildResultsNoRender();
+
+  const roles = Array.from(new Set([
+    ...ADMIN_CONFIG.activeRoles,
+    ...finalResults.map(g=>g.role)
+  ])).filter(Boolean);
+
+  const publicLines = [];
+  const adminLines = [`【対象アンケート】${getTargetSurveyLabel()}`, ''];
+
+  roles.forEach((role, idx)=>{
+    if(idx>0){
+      publicLines.push('', '');
+      adminLines.push('', '');
+    }
+
+    const roleResults = finalResults
+      .filter(g=>g.role===role && g.winner)
+      .sort((a,b)=>ALL_SLOTS.indexOf(a.time)-ALL_SLOTS.indexOf(b.time));
+
+    const filled = new Set(roleResults.map(g=>g.time));
+    const emptySlots = ALL_SLOTS.filter(t=>!filled.has(t));
+
+    // ===== 全員周知用：時間と名前だけ =====
+    publicLines.push(`【${role}予約 確定表】`);
+    publicLines.push('');
+    if(roleResults.length===0){
+      publicLines.push('確定者なし');
+    }else{
+      roleResults.forEach(g=>{
+        publicLines.push(`${g.time} ${g.winner.name}`);
+      });
+    }
+    publicLines.push('');
+    publicLines.push('【空き時間】');
+    if(emptySlots.length===0){
+      publicLines.push('なし');
+    }else{
+      for(let i=0;i<emptySlots.length;i+=8){
+        publicLines.push(emptySlots.slice(i,i+8).join(' / '));
+      }
+    }
+
+    // ===== 管理者用：点数・希望順位・補欠候補付き =====
+    adminLines.push(`【${role}予約 管理者用詳細】`);
+    adminLines.push('');
+    if(roleResults.length===0){
+      adminLines.push('確定者なし');
+    }else{
+      roleResults.forEach(g=>{
+        const win = g.winner;
+        const prefLabel = win.pref === 0 ? 'お任せ' : win.pref === 4 ? '自動割当' : `第${win.pref}希望`;
+        adminLines.push(`${g.time} ${role}：${win.name}（${win.totalPt}pt / ${prefLabel}）`);
+
+        const backups = (g.candidates || [])
+          .filter(c => c.name !== win.name)
+          .sort(compareCandidates)
+          .slice(0,2);
+        if(backups.length){
+          adminLines.push('　' + backups.map((b,i)=>{
+            const bp = b.pref === 0 ? 'お任せ' : b.pref === 4 ? '自動割当' : `第${b.pref}希望`;
+            return `補欠${i+1} ${b.name}（${b.totalPt}pt / ${bp}）`;
+          }).join(' / '));
+        }
+      });
+    }
+    adminLines.push('');
+    adminLines.push('【空き時間】');
+    if(emptySlots.length===0){
+      adminLines.push('なし');
+    }else{
+      for(let i=0;i<emptySlots.length;i+=8){
+        adminLines.push(emptySlots.slice(i,i+8).join(' / '));
+      }
+    }
+  });
+
+  if(roles.length===0){
+    publicLines.push('まだ申請データがありません。');
+    adminLines.push('まだ申請データがありません。');
+  }
+
+  publicLines.push('');
+  publicLines.push('※確定者は時間になったらゲーム内予約をお願いします。');
+
+  adminLines.push('');
+  adminLines.push('※管理者確認用です。全員周知には使わないでください。');
+
+  document.getElementById('postTextPublic').value = publicLines.join('\n');
+  document.getElementById('postTextAdmin').value = adminLines.join('\n');
+}
+function buildResultsNoRender(){
+  const built = buildFinalAssignments();
+  benchList = built.benchList || [];
+  finalResults = built.winners.map(w=>({
+    role:w.role,
+    time:w.time,
+    winner:w,
+    candidates:(built.candidateMap[`${w.role}|${w.time}`]||[]).sort(compareCandidates)
+  }));
+}
+function copyPostText(type){
+  const el = document.getElementById(type === 'admin' ? 'postTextAdmin' : 'postTextPublic');
+  el.select(); el.setSelectionRange(0, 99999);
+  navigator.clipboard?.writeText(el.value);
+}
+function escapeHtml(str){ return String(str).replace(/[&<>"]/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s])); }
+function escapeAttr(str){ return String(str).replace(/['\\]/g, '\\$&'); }
+
+// ===================================================
+// 初期化
+// ===================================================
+buildRoleTabs();
+buildQuestions();
+renderSeats();
+updateDecideBtn();
+// Firebase接続・リアルタイム同期開始
+initFirebase();
+applyPublicSurveyState();
+
+
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Enter' && document.getElementById('adminLoginOverlay')?.classList.contains('open')){
+    loginAdmin();
+  }
+});
+
+</script>
+</body>
+</html>
