@@ -242,6 +242,14 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
 .member-name{font-size:14px;font-weight:700;flex:1;}
 /* 管理ボタン（右下） */
 .state-deadline{margin-top:10px;font-size:13px;color:var(--gold);font-weight:700;text-align:center;padding:8px 12px;background:rgba(247,215,116,.1);border:1px solid rgba(247,215,116,.3);border-radius:8px;}
+.state-overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:24px;}
+.state-overlay.open{display:flex;}
+.state-popup{background:var(--bg2);border:2px solid var(--border);border-radius:20px;padding:28px 20px;width:100%;max-width:320px;text-align:center;}
+.state-icon{font-size:48px;margin-bottom:12px;}
+.state-title{font-size:17px;font-weight:900;color:var(--text);margin-bottom:8px;line-height:1.4;}
+.state-message{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
+.state-back-btn{width:100%;height:48px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:14px;font-weight:700;cursor:pointer;}
+.state-back-btn:active{filter:brightness(.85);}
 .admin-toggle{position:fixed;right:12px;bottom:132px;z-index:80;width:auto;min-width:64px;height:40px;border-radius:999px;font-size:13px;padding:0 14px;background:rgba(10,14,26,.88);border:1px solid var(--border);color:var(--text2);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.4);font-weight:700;font-family:'Noto Sans JP',sans-serif;}
 /* ログインオーバーレイ */
 .admin-login-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.76);z-index:520;align-items:center;justify-content:center;padding:20px;}
@@ -259,15 +267,14 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
 </head>
 <body>
 
-<!-- 通行止め画面（未実施・締切済） -->
+<!-- 通行止めポップアップ -->
 <div class="state-overlay" id="stateOverlay">
-  <div class="state-card">
+  <div class="state-popup">
     <div class="state-icon" id="stateIcon">ℹ️</div>
     <div class="state-title" id="stateTitle">アンケートは実施されていません</div>
     <div class="state-message" id="stateMessage">募集が開始されるまでお待ちください。</div>
+    <button class="state-back-btn" onclick="location.href='https://kekj12kek-sudo.github.io/1648-hq/'">← HQに戻る</button>
   </div>
-  <!-- 管理者専用ボタン -->
-  <button class="admin-toggle" onclick="openAdmin()" style="position:fixed;right:12px;bottom:24px;z-index:600;">管理</button>
 </div>
 
 <!-- 登録画面 -->
@@ -366,7 +373,6 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
     <div class="admin-tab" data-atab="priority" onclick="switchAdminTab(this)">申請者加点</div>
     <div class="admin-tab" data-atab="result" onclick="switchAdminTab(this)">時間別集計</div>
     <div class="admin-tab" data-atab="post" onclick="switchAdminTab(this)">投稿文</div>
-    <div class="admin-tab" data-atab="members" onclick="switchAdminTab(this)">メンバー</div>
   </div>
   <!-- ボディ -->
   <div class="admin-body">
@@ -431,35 +437,22 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
 
     </div>
 
-    <!-- メンバー管理 -->
-    <div class="admin-page" id="apage-members">
-      <div class="admin-card">
-        <div class="admin-card-title">メンバー追加</div>
-        <div class="admin-row">
-          <input class="admin-input admin-fl" id="newMemberName" placeholder="ゲーム内ネーム">
-          <button class="admin-btn blue admin-btn sm" onclick="addAdminMember()">追加</button>
-        </div>
-      </div>
-      <div class="admin-card">
-        <div class="admin-card-title">メンバー一覧</div>
-        <div class="admin-info">
-          <span style="color:var(--gold)">★代表</span>＝サーバー代表集結主 +2　
-          <span style="color:#22c55e">●集結</span>＝同盟集結主 +1　
-          SVS＝貢献度ポイント（裁量）
-        </div>
-        <div id="adminMemberList"></div>
-      </div>
-    </div>
+
 
     <!-- 申請者加点 -->
     <div class="admin-page" id="apage-priority">
       <div class="admin-step">
         <div class="admin-step-title">締切後にやること</div>
-        <div class="admin-step-text">アンケート締切後、回答者一覧にポイントを付けます。集結主・SVS貢献度はメンバー管理で設定した値が自動で反映されます。</div>
+        <div class="admin-step-text">回答者ごとに集結主・SVS貢献度のポイントを付与します。付与後に時間別集計タブで割り振りを実行してください。</div>
+      </div>
+      <div class="admin-info" style="margin-bottom:10px">
+        <span style="color:var(--gold)">★代表集結主</span> +2　
+        <span style="color:#22c55e">●同盟集結主</span> +1　
+        <span style="color:var(--purple,#a78bfa)">SVS</span> 貢献度 +1〜3（裁量）
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button class="admin-btn blue" style="flex:1;height:42px" onclick="generateDemoSubmissions()">デモ申請を追加</button>
-        <button class="admin-btn red" style="flex:1;height:42px" onclick="clearManualPoints()">加点を全クリア</button>
+        <button class="admin-btn blue" style="flex:1;height:40px" onclick="generateDemoSubmissions()">デモ申請を追加</button>
+        <button class="admin-btn red" style="flex:1;height:40px" onclick="clearManualPoints()">加点を全クリア</button>
       </div>
       <div id="priorityList"></div>
     </div>
@@ -776,10 +769,17 @@ function sameLocalDate(a,b){
     && da.getDate()===db.getDate();
 }
 function getPublicState(){
-  if(PUBLIC_SURVEY.status === 'open')     return 'open';
+  if(PUBLIC_SURVEY.status === 'open')      return 'open';
   if(PUBLIC_SURVEY.status === 'published') return 'published';
-  if(PUBLIC_SURVEY.status === 'closed')   return 'closed';
-  if(PUBLIC_SURVEY.status === 'reserved') return 'none'; // 予約済・未開始は「未実施」表示
+  if(PUBLIC_SURVEY.status === 'reserved')  return 'none';
+  if(PUBLIC_SURVEY.status === 'closed'){
+    // 締切後12時間以内は「終了しました」、以降は「未実施」に戻す
+    if(PUBLIC_SURVEY.endedAt){
+      const elapsed = Date.now() - new Date(PUBLIC_SURVEY.endedAt).getTime();
+      if(elapsed < 12 * 60 * 60 * 1000) return 'closed';
+    }
+    return 'none';
+  }
   return 'none';
 }
 function isSurveyOpen(){ return getPublicState() === 'open'; }
@@ -817,6 +817,9 @@ function applyPublicSurveyState(){
     document.getElementById('stateTitle').textContent = 'アンケートは実施されていません。';
     document.getElementById('stateMessage').textContent = '募集が開始されるまでお待ちください。';
   }
+  // 管理者ボタンは通行止め画面の外（座席表側）に表示
+  const adminBtn = document.querySelector('button.admin-toggle');
+  if(adminBtn) adminBtn.style.zIndex = '600';
 }
 
 // ===================================================
@@ -1586,7 +1589,7 @@ function renderPriorityList(){
         <div class="point-field">
           <div class="point-label">主ポイント</div>
           <select class="point-select" onchange="setMainPoint('${safeName}', this.value)">
-            <option value="0" ${mainPt===0?'selected':''}>未設定 ±0</option>
+            <option value="0" ${mainPt===0?'selected':''}>なし ±0</option>
             <option value="1" ${mainPt===1?'selected':''}>準集結主 +1</option>
             <option value="2" ${mainPt===2?'selected':''}>集結主 +2</option>
           </select>
@@ -1979,10 +1982,8 @@ function buildPostText(){
   }
   buildResultsNoRender();
 
-  const roles = Array.from(new Set([
-    ...ADMIN_CONFIG.activeRoles,
-    ...finalResults.map(g=>g.role)
-  ])).filter(Boolean);
+  // 実施した官職のみ（activeRolesに含まれるものだけ）
+  const roles = ADMIN_CONFIG.activeRoles.filter(Boolean);
 
   const publicLines = [];
   const adminLines = [`【対象アンケート】${getTargetSurveyLabel()}`, ''];
