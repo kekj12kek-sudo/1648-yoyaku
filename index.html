@@ -594,9 +594,12 @@ const ADMIN_CONFIG = {
 // ===================================================
 const PUBLIC_SURVEY = {
   id: 'survey-001',
-  title: '教育部長予約',
-  status: 'open',
-  endedAt: new Date().toISOString(),
+  title: '官職予約',
+  status: 'none',   // Firebase読み込み前はデフォルト「未実施」
+  endedAt: null,
+  deadline: null,
+  startedAt: null,
+  reservedStart: null,
   published: false
 };
 
@@ -838,7 +841,10 @@ function applyPublicSurveyState(){
     // 受付中：通行止めを外して登録ポップアップを出す
     overlay.classList.remove('open');
     document.body.classList.remove('public-locked');
-    if(!userName && reg) reg.style.display = 'flex';
+    if(!userName && reg){
+      buildQuestions();
+      reg.style.display = 'flex';
+    }
     return;
   }
 
@@ -932,6 +938,9 @@ function startReservation(){
 function showRegister(){
   if(!isSurveyOpen()) return;
   document.getElementById('regName').value = userName;
+  buildQuestions(); // Firebaseから読み込んだ最新の質問を反映
+  userAnswers = {};
+  document.getElementById('regErr').textContent = '';
   document.getElementById('registerOverlay').style.display = 'flex';
 }
 
@@ -2207,6 +2216,8 @@ buildRoleTabs();
 buildQuestions();
 renderSeats();
 updateDecideBtn();
+// 初期状態：Firebase読み込み前は通行止め表示しない
+// （initFirebase内のon('value')コールバックでapplyPublicSurveyStateが呼ばれる）
 // Firebase接続・リアルタイム同期開始
 initFirebase();
 applyPublicSurveyState();
