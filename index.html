@@ -1424,21 +1424,59 @@ function saveSurveyToDB(data){
   fbDb.ref(DB_SURVEY).update(data).catch(e=>console.warn("survey save failed",e));
 }
 
+// 新アンケート開始時にseats・submissionsをリセット
+function resetSurveyData(newId){
+  // ローカルリセット
+  ADMIN_CONFIG.activeRoles.forEach(role=>{
+    ALL_SLOTS.forEach(t=>{
+      seats[role][t] = [0,0,0];
+      isMe[role][t]  = [false,false,false];
+    });
+  });
+  myReservations[1]=null; myReservations[2]=null; myReservations[3]=null;
+  submissions = [];
+  manualPoints = {};
+  isOmakase = false;
+  userName = '';
+  document.getElementById('userName').textContent = '👤 未登録';
+  renderSeats();
+  renderSummary();
+  updateDecideBtn();
+
+  // Firebase リセット
+  if(fbDb){
+    fbDb.ref(DB_SEATS).remove();
+    fbDb.ref(`${DB_SUBMISSIONS}/${newId}`).remove();
+    fbDb.ref(DB_MANUALPTS).remove();
+  }
+}
+
+// 新しいsurveyId生成
+function newSurveyId(){
+  return 'survey_' + Date.now();
+}
+
 // 今すぐ開始
 function startSurveyNow(){
   const end = document.getElementById('endDateNow').value;
   if(!end){ alert('終了日時を入力してください'); return; }
-  if(!confirm('今すぐアンケートを開始しますか？')) return;
+  if(!confirm('今すぐアンケートを開始しますか？
+前回の座席データはリセットされます。')) return;
 
-  // 官職設定を反映
   saveRoleSettings();
 
+  const newId = newSurveyId();
+  currentSurveyId = newId;
   PUBLIC_SURVEY.status    = 'open';
   PUBLIC_SURVEY.startedAt = new Date().toISOString();
   PUBLIC_SURVEY.deadline  = end;
   PUBLIC_SURVEY.endedAt   = null;
+  PUBLIC_SURVEY.id        = newId;
+
+  resetSurveyData(newId);
 
   saveSurveyToDB({
+    id       : newId,
     status   : 'open',
     startedAt: PUBLIC_SURVEY.startedAt,
     deadline : end,
@@ -1446,6 +1484,7 @@ function startSurveyNow(){
     activeRoles: ADMIN_CONFIG.activeRoles,
   });
   saveConfigToDB();
+  if(window._loadSubmissions) window._loadSubmissions(newId);
 
   updateAdminStatusUI();
   applyPublicSurveyState();
@@ -1459,15 +1498,22 @@ function reserveSurvey(){
   const end   = document.getElementById('endDateReserve').value;
   if(!start || !end){ alert('開始・終了日時を入力してください'); return; }
   if(new Date(start) >= new Date(end)){ alert('終了日時は開始日時より後にしてください'); return; }
-  if(!confirm(`${start.replace('T',' ')} にアンケートを開始予約しますか？`)) return;
+  if(!confirm(`${start.replace('T',' ')} にアンケートを開始予約しますか？
+前回の座席データはリセットされます。`)) return;
 
   saveRoleSettings();
 
-  PUBLIC_SURVEY.status      = 'reserved';
+  const newId = newSurveyId();
+  currentSurveyId = newId;
+  PUBLIC_SURVEY.status        = 'reserved';
   PUBLIC_SURVEY.reservedStart = start;
-  PUBLIC_SURVEY.deadline    = end;
+  PUBLIC_SURVEY.deadline      = end;
+  PUBLIC_SURVEY.id            = newId;
+
+  resetSurveyData(newId);
 
   saveSurveyToDB({
+    id            : newId,
     status        : 'reserved',
     reservedStart : start,
     deadline      : end,
@@ -1475,6 +1521,7 @@ function reserveSurvey(){
     activeRoles   : ADMIN_CONFIG.activeRoles,
   });
   saveConfigToDB();
+  if(window._loadSubmissions) window._loadSubmissions(newId);
 
   updateAdminStatusUI();
   startSurveyTimer();
