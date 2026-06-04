@@ -922,7 +922,7 @@ function selectChoice(el){
 }
 
 function startReservation(){
-  if(!isSurveyOpen()) return;
+  // isSurveyOpenチェックはapplyPublicSurveyStateで制御済みのため不要
   const name = document.getElementById('regName').value.trim();
   const err = document.getElementById('regErr');
   if(!name){ err.textContent='ゲーム内ネームを入力してください'; return; }
@@ -936,7 +936,6 @@ function startReservation(){
 }
 
 function showRegister(){
-  if(!isSurveyOpen()) return;
   document.getElementById('regName').value = userName;
   buildQuestions(); // Firebaseから読み込んだ最新の質問を反映
   userAnswers = {};
@@ -948,7 +947,6 @@ function showRegister(){
 // お任せ
 // ===================================================
 function toggleOmakase(){
-  if(!isSurveyOpen()) return;
   if(submitted) return;
   isOmakase = !isOmakase;
   const banner = document.getElementById('omakaseBanner');
