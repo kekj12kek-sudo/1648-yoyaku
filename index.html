@@ -642,6 +642,19 @@ let userAnswers = {};
 let popupTarget = {time:null, selectedPref:null};
 let submitted = false;
 
+// 同じ端末判定用ID（同名再回答時の座席残り対策）
+const CLIENT_ID_KEY = 'wos_yoyaku_client_id';
+function getClientId(){
+  let id = localStorage.getItem(CLIENT_ID_KEY);
+  if(!id){
+    id = 'client_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    localStorage.setItem(CLIENT_ID_KEY, id);
+  }
+  return id;
+}
+const clientId = getClientId();
+
+
 
 // ===================================================
 // 集計用データ（Firebase接続前のローカル版）
@@ -1244,24 +1257,37 @@ function showConfirm(){
   // 回答をFirebaseに保存
   const record = {
     name: userName,
+    clientId,
     surveyId: currentSurveyId,
     answers: JSON.parse(JSON.stringify(userAnswers)),
     omakase: isOmakase,
     reservations: JSON.parse(JSON.stringify(myReservations)),
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
   const safeKey = userName.replace(/[.#$\[\]]/g,'_');
   if(fbDb){
-    fbDb.ref(`${DB_SUBMISSIONS}/${currentSurveyId}/${safeKey}`).set(record)
-      .then(()=>console.log("submission saved"))
-      .catch(e=>console.warn("submission save failed", e));
-    // 座席データも更新
-    saveSeatsToDB();
+    // 同じ端末・同じ名前の再回答は、前回分の座席カウントを先に差し引いてから上書きする
+    const ref = fbDb.ref(`${DB_SUBMISSIONS}/${currentSurveyId}/${safeKey}`);
+    ref.once('value').then(snap=>{
+      const oldRecord = snap.val();
+      if(oldRecord && oldRecord.clientId === clientId){
+        removeReservationCountsFromSeats(oldRecord.reservations);
+      }
+      return ref.set(record);
+    }).then(()=>{
+      console.log("submission overwritten/saved");
+      saveSeatsToDB();
+    }).catch(e=>console.warn("submission save failed", e));
   } else {
-    // オフライン：ローカルに保存
-    const existingIdx = submissions.findIndex(s=>s.name===userName);
-    if(existingIdx >= 0) submissions[existingIdx] = record;
-    else submissions.push(record);
+    // オフライン：同じ端末・同じ名前なら前回分を削除して上書き
+    const existingIdx = submissions.findIndex(s=>s.name===userName && s.clientId===clientId);
+    if(existingIdx >= 0){
+      removeReservationCountsFromSeats(submissions[existingIdx].reservations);
+      submissions[existingIdx] = record;
+    } else {
+      submissions.push(record);
+    }
   }
 
   document.getElementById('completeOverlay').classList.add('open');
@@ -1271,6 +1297,23 @@ function closeComplete(){
   document.getElementById('completeOverlay').classList.remove('open');
 }
 
+
+
+// 既存回答を同じ名前・同じ端末で上書きするとき、古い座席カウントを戻す
+function removeReservationCountsFromSeats(oldReservations){
+  if(!oldReservations) return;
+  [1,2,3].forEach(p=>{
+    const r = oldReservations[p];
+    if(!r || !r.role || !r.time) return;
+    if(!seats[r.role] || !seats[r.role][r.time]) return;
+    const pref = Number(p);
+    const idx = seats[r.role][r.time].indexOf(pref);
+    if(idx >= 0){
+      seats[r.role][r.time][idx] = 0;
+    }
+  });
+  renderSeats();
+}
 
 
 // ===================================================
