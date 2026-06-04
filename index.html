@@ -236,6 +236,32 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
 .result-winner{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:rgba(22,101,52,.2);border:1px solid #22c55e;margin-bottom:6px;font-size:13px;}
 .result-backup{font-size:11px;color:var(--text2);padding:4px 8px;}
 .post-box{width:100%;min-height:160px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;padding:10px;font-family:'Noto Sans JP',sans-serif;resize:vertical;line-height:1.7;}
+.applicant-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;}
+.applicant-card-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.applicant-rank{font-size:11px;color:var(--text3);min-width:24px;}
+.applicant-card-name{font-size:15px;font-weight:900;flex:1;}
+.applicant-card-total{font-size:22px;font-weight:900;color:var(--gold);}
+.applicant-card-accel{font-size:11px;color:var(--text2);margin-bottom:6px;}
+.applicant-prefs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;}
+.applicant-pref-tag{font-size:10px;padding:3px 7px;border-radius:20px;font-weight:700;}
+.applicant-pref-tag.p1{background:rgba(133,77,14,.5);border:1px solid var(--p1);color:#fde68a;}
+.applicant-pref-tag.p2{background:rgba(30,58,138,.5);border:1px solid var(--p2);color:#93c5fd;}
+.applicant-pref-tag.p3{background:rgba(76,29,149,.5);border:1px solid var(--p3);color:#c4b5fd;}
+.applicant-pref-tag.omakase{background:rgba(22,101,52,.4);border:1px solid #22c55e;color:#86efac;}
+.applicant-ctrl-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border);}
+.applicant-ctrl-label{font-size:11px;color:var(--text2);min-width:52px;}
+.applicant-seg{display:flex;flex:1;border-radius:8px;overflow:hidden;border:1px solid var(--border);}
+.applicant-seg-btn{flex:1;padding:8px 4px;text-align:center;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text2);border:none;border-right:1px solid var(--border);}
+.applicant-seg-btn:last-child{border-right:none;}
+.applicant-seg-btn.on-none{background:var(--bg);color:var(--text);}
+.applicant-seg-btn.on-jun{background:linear-gradient(180deg,#166534,#0f4024);color:#86efac;}
+.applicant-seg-btn.on-main{background:linear-gradient(180deg,#78350f,#4d2008);color:#fde68a;}
+.applicant-svs{display:flex;align-items:center;gap:6px;}
+.applicant-svs-val{min-width:32px;text-align:center;font-size:16px;font-weight:900;color:var(--gold);}
+.applicant-pt-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.applicant-pt-chip{font-size:10px;padding:2px 8px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--text2);}
+.applicant-pt-chip.total{border-color:var(--gold);color:var(--gold);font-weight:900;}
+.poll-scope-note{font-size:11px;color:var(--text2);padding:8px 10px;background:var(--bg);border-radius:8px;margin-bottom:10px;line-height:1.6;}
 .empty-admin{background:var(--bg);border:1px dashed var(--border);border-radius:12px;padding:24px;text-align:center;color:var(--text3);font-size:13px;line-height:1.6;}
 .member-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:8px;}
 .member-row:last-child{border-bottom:none;}
@@ -1571,72 +1597,92 @@ function getSubmissionByName(name){
 }
 function renderPriorityList(){
   const box = document.getElementById('priorityList');
-  box.innerHTML = `<div class="poll-scope-note">対象：${escapeHtml(getTargetSurveyLabel())}<br>固定情報は確認用です。変更できるのは下のプルダウンだけです。</div>`;
+  box.innerHTML = `<div class="poll-scope-note">対象：${escapeHtml(getTargetSurveyLabel())}</div>`;
   const names = getApplicantNames();
   if(names.length===0){
-    box.innerHTML += '<div class="empty-admin">終了済みの直近アンケートに申請データがありません。<br>投稿文もこのアンケートだけを対象にします。</div>';
+    box.innerHTML += '<div class="empty-admin">終了済みの直近アンケートに申請データがありません。</div>';
     return;
   }
-  names.forEach(name=>{
+
+  // ポイント順でソート
+  const sorted = [...names].sort((a,b)=>{
+    const subA = getSubmissionByName(a), subB = getSubmissionByName(b);
+    const ptA = (subA ? calcBasePoint(subA.answers||{}) : 0) + getMainPoint(a) + getSvsPoint(a);
+    const ptB = (subB ? calcBasePoint(subB.answers||{}) : 0) + getMainPoint(b) + getSvsPoint(b);
+    return ptB - ptA;
+  });
+
+  sorted.forEach((name, idx)=>{
     const sub = getSubmissionByName(name);
     const base = sub ? calcBasePoint(sub.answers||{}) : 0;
     const mainPt = getMainPoint(name);
     const svsPt = getSvsPoint(name);
-    const manual = mainPt + svsPt;
-    const total = base + manual;
+    const total = base + mainPt + svsPt;
     const accel = sub ? choiceText('q1', sub.answers||{}) : '申請なし';
-    let prefText = '希望なし';
-    if(sub && sub.omakase){
-      prefText = '時間帯はお任せ';
-    }else if(sub && sub.reservations){
-      prefText = [1,2,3].map(p=>{
-        const r = sub.reservations[p];
-        return r ? `第${p}:${r.role} ${r.time}` : `第${p}:未選択`;
-      }).join(' / ');
-    }
     const safeName = escapeAttr(name);
-    const row = document.createElement('div');
-    row.className = 'applicant-row';
-    row.innerHTML = `
-      <div class="applicant-main">
-        <div>
-          <div class="applicant-name">${escapeHtml(name)}</div>
-          <div class="applicant-meta">${escapeHtml(accel)} / ${escapeHtml(prefText)}</div>
-        </div>
-        <div class="applicant-total">${total>=0?'+':''}${total}pt</div>
+
+    // 希望タグ
+    let prefTagsHtml = '';
+    if(sub && sub.omakase){
+      prefTagsHtml = `<span class="applicant-pref-tag omakase">時間帯はお任せ</span>`;
+    } else if(sub && sub.reservations){
+      [1,2,3].forEach(p=>{
+        const r = sub.reservations[p];
+        if(r) prefTagsHtml += `<span class="applicant-pref-tag p${p}">第${p} ${r.time}</span>`;
+      });
+    }
+
+    const card = document.createElement('div');
+    card.className = 'applicant-card';
+    card.innerHTML = `
+      <div class="applicant-card-header">
+        <div class="applicant-rank">#${idx+1}</div>
+        <div class="applicant-card-name">${escapeHtml(name)}</div>
+        <div class="applicant-card-total">${total}pt</div>
       </div>
-      <div class="point-controls">
-        <div class="point-field">
-          <div class="point-label">主ポイント</div>
-          <select class="point-select" onchange="setMainPoint('${safeName}', this.value)">
-            <option value="0" ${mainPt===0?'selected':''}>なし ±0</option>
-            <option value="1" ${mainPt===1?'selected':''}>準集結主 +1</option>
-            <option value="2" ${mainPt===2?'selected':''}>集結主 +2</option>
-          </select>
-        </div>
-        <div class="point-field">
-          <div class="point-label">SVS貢献度</div>
-          <select class="point-select" onchange="setSvsPoint('${safeName}', this.value)">
-            <option value="0" ${svsPt===0?'selected':''}>0ポイント</option>
-            <option value="1" ${svsPt===1?'selected':''}>1ポイント</option>
-            <option value="2" ${svsPt===2?'selected':''}>2ポイント</option>
-            <option value="3" ${svsPt===3?'selected':''}>3ポイント</option>
-          </select>
+      <div class="applicant-card-accel">加速: ${escapeHtml(accel)}</div>
+      <div class="applicant-prefs">${prefTagsHtml}</div>
+      <div class="applicant-ctrl-row">
+        <div class="applicant-ctrl-label">集結主</div>
+        <div class="applicant-seg">
+          <button class="applicant-seg-btn ${mainPt===0?'on-none':''}" onclick="setMainPoint('${safeName}',0)">なし</button>
+          <button class="applicant-seg-btn ${mainPt===1?'on-jun':''}" onclick="setMainPoint('${safeName}',1)">準+1</button>
+          <button class="applicant-seg-btn ${mainPt===2?'on-main':''}" onclick="setMainPoint('${safeName}',2)">代表+2</button>
         </div>
       </div>
-      <div class="point-detail">
-        <div class="point-pill">加速 ${base>=0?'+':''}${base}</div>
-        <div class="point-pill">主 ${mainPt>=0?'+':''}${mainPt}</div>
-        <div class="point-pill">SVS ${svsPt>=0?'+':''}${svsPt}</div>
-        <div class="point-pill">合計 ${total>=0?'+':''}${total}</div>
-      </div>`;
-    box.appendChild(row);
+      <div class="applicant-ctrl-row">
+        <div class="applicant-ctrl-label">SVS</div>
+        <div class="applicant-svs">
+          <button class="step-btn" onclick="stepSvsPoint('${safeName}',-1)">−</button>
+          <div class="applicant-svs-val" id="svsval-${idx}">${svsPt}</div>
+          <button class="step-btn" onclick="stepSvsPoint('${safeName}',1)">＋</button>
+          <div style="font-size:11px;color:var(--text2);margin-left:4px">+${svsPt}pt</div>
+        </div>
+      </div>
+      <div class="applicant-pt-row">
+        <span class="applicant-pt-chip">加速 +${base}</span>
+        <span class="applicant-pt-chip">集結 +${mainPt}</span>
+        <span class="applicant-pt-chip">SVS +${svsPt}</span>
+        <span class="applicant-pt-chip total">合計 ${total}pt</span>
+      </div>
+    `;
+    box.appendChild(card);
   });
+}
+
+function stepSvsPoint(name, delta){
+  const p = getPointRecord(name);
+  p.svs = Math.max(0, Math.min(3, (p.svs||0) + delta));
+  manualPoints[name] = p;
+  saveManualPointsToDB();
+  renderPriorityList();
+  buildResults();
 }
 function setMainPoint(name, val){
   const p = getPointRecord(name);
   p.main = Number(val || 0);
   manualPoints[name] = p;
+  saveManualPointsToDB();
   renderPriorityList();
   buildResults();
 }
