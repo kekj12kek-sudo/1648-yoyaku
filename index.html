@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>1648 官職予約</title>
+<title>1648 官職予約 EXPRESS</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -241,6 +241,7 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
 .member-row:last-child{border-bottom:none;}
 .member-name{font-size:14px;font-weight:700;flex:1;}
 /* 管理ボタン（右下） */
+.state-deadline{margin-top:10px;font-size:13px;color:var(--gold);font-weight:700;text-align:center;padding:8px 12px;background:rgba(247,215,116,.1);border:1px solid rgba(247,215,116,.3);border-radius:8px;}
 .admin-toggle{position:fixed;right:12px;bottom:132px;z-index:80;width:auto;min-width:64px;height:40px;border-radius:999px;font-size:13px;padding:0 14px;background:rgba(10,14,26,.88);border:1px solid var(--border);color:var(--text2);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.4);font-weight:700;font-family:'Noto Sans JP',sans-serif;}
 /* ログインオーバーレイ */
 .admin-login-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.76);z-index:520;align-items:center;justify-content:center;padding:20px;}
@@ -258,20 +259,21 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
 </head>
 <body>
 
-<!-- 状態表示（締切済み・未実施） -->
+<!-- 通行止め画面（未実施・締切済） -->
 <div class="state-overlay" id="stateOverlay">
   <div class="state-card">
     <div class="state-icon" id="stateIcon">ℹ️</div>
-    <div class="state-title" id="stateTitle">現在実施中のアンケートはありません</div>
+    <div class="state-title" id="stateTitle">アンケートは実施されていません</div>
     <div class="state-message" id="stateMessage">募集が開始されるまでお待ちください。</div>
-    <div class="state-sub">管理者は右下の「管理」からログインできます。</div>
   </div>
+  <!-- 管理者専用ボタン -->
+  <button class="admin-toggle" onclick="openAdmin()" style="position:fixed;right:12px;bottom:24px;z-index:600;">管理</button>
 </div>
 
 <!-- 登録画面 -->
 <div class="register-overlay" id="registerOverlay">
   <div class="register-box">
-    <h2>👤 参加登録</h2>
+    <h2>📝 アンケートに回答する</h2>
     <p>ゲーム内ネームと各項目を入力してください</p>
     <div class="reg-section">
       <label class="reg-label">ゲーム内ネーム</label>
@@ -279,13 +281,13 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
     </div>
     <div id="questionsArea"></div>
     <div class="reg-err" id="regErr"></div>
-    <button class="btn-start" onclick="startReservation()">✓ 予約画面へ進む</button>
+    <button class="btn-start" onclick="startReservation()">✓ 座席表へ進む</button>
   </div>
 </div>
 
 <!-- ヘッダー -->
 <div class="header">
-  <div class="header-title">1648 官職予約</div>
+  <div class="header-title">🚄 1648 官職予約 EXPRESS</div>
   <div class="role-tabs" id="roleTabs"></div>
   <div class="user-bar">
     <span class="user-name" id="userName">👤 未登録</span>
@@ -360,53 +362,72 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
   <!-- タブバー -->
   <div class="admin-tab-bar">
     <div class="admin-tab active" data-atab="settings" onclick="switchAdminTab(this)">設定</div>
-    <div class="admin-tab" data-atab="members" onclick="switchAdminTab(this)">メンバー</div>
     <div class="admin-tab" data-atab="priority" onclick="switchAdminTab(this)">申請者加点</div>
     <div class="admin-tab" data-atab="result" onclick="switchAdminTab(this)">時間別集計</div>
     <div class="admin-tab" data-atab="post" onclick="switchAdminTab(this)">投稿文</div>
+    <div class="admin-tab" data-atab="members" onclick="switchAdminTab(this)">メンバー</div>
   </div>
   <!-- ボディ -->
   <div class="admin-body">
 
     <!-- 設定 -->
     <div class="admin-page active" id="apage-settings">
+
+      <!-- 現在の状態 -->
       <div class="admin-card">
-        <div class="admin-card-title">アンケート対象官職</div>
+        <div class="admin-card-title">📊 現在の状態</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+          <div style="font-size:13px;color:var(--text2)">アンケート状態</div>
+          <span id="adminStatusBadge" style="font-size:13px;font-weight:900;color:#22c55e">未実施</span>
+        </div>
+        <div id="adminDeadlineInfo" style="font-size:11px;color:var(--text2);margin-top:4px"></div>
+        <button class="admin-btn red" style="width:100%;height:40px;margin-top:10px" id="btnManualClose" onclick="manualClose()">🔒 今すぐ締め切る</button>
+      </div>
+
+      <!-- 官職選択 -->
+      <div class="admin-card">
+        <div class="admin-card-title">⚔️ アンケート対象官職</div>
         <div class="toggle-row">
-          <div><div style="font-weight:700">⚔️ 副執政官</div><div style="font-size:11px;color:var(--text2)">予約アンケートを受け付ける</div></div>
-          <label class="tgl"><input type="checkbox" id="tog-副執政官" checked onchange="saveRoleSettings()"><span class="tsl"></span></label>
+          <div><div style="font-weight:700">⚔️ 副執政官</div></div>
+          <label class="tgl"><input type="checkbox" id="tog-副執政官" checked><span class="tsl"></span></label>
         </div>
         <div class="toggle-row">
-          <div><div style="font-weight:700">📚 教育部長</div><div style="font-size:11px;color:var(--text2)">予約アンケートを受け付ける</div></div>
-          <label class="tgl"><input type="checkbox" id="tog-教育部長" onchange="saveRoleSettings()"><span class="tsl"></span></label>
+          <div><div style="font-weight:700">📚 教育部長</div></div>
+          <label class="tgl"><input type="checkbox" id="tog-教育部長"><span class="tsl"></span></label>
         </div>
       </div>
+
+      <!-- 質問編集 -->
       <div class="admin-card">
-        <div class="admin-card-title">アンケート締切</div>
-        <div class="seg" style="margin-bottom:12px">
-          <div class="seg-btn on" id="seg-auto" onclick="setDeadlineMode('auto')">日時指定</div>
-          <div class="seg-btn" id="seg-manual" onclick="setDeadlineMode('manual')">手動締切</div>
-        </div>
-        <div id="deadline-auto-area">
-          <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">締切日時</label>
-          <input class="admin-input" type="datetime-local" id="deadlineInput" style="margin-bottom:10px">
-          <button class="admin-btn blue" style="width:100%" onclick="saveDeadline()">締切を設定する</button>
-        </div>
-        <div id="deadline-manual-area" style="display:none">
-          <div class="admin-info">手動締切モードです。</div>
-          <button class="admin-btn red" style="width:100%;height:44px" onclick="manualClose()">🔒 今すぐ締め切る</button>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
-          <div style="font-size:12px;color:var(--text2)">現在の状態</div>
-          <span id="adminStatusBadge" style="font-size:12px;font-weight:700;color:#22c55e">受付中</span>
-        </div>
-      </div>
-      <div class="admin-card">
-        <div class="admin-card-title">質問編集（4択固定）</div>
+        <div class="admin-card-title">📝 質問編集（4択固定）</div>
         <div id="adminQuestionList"></div>
         <button class="admin-btn green" style="margin-top:8px;width:100%" onclick="addAdminQuestion()">＋ 質問を追加</button>
         <div class="admin-info" style="margin-top:8px">※ポイントは管理者のみ確認できます</div>
       </div>
+
+      <!-- アンケート開始 -->
+      <div class="admin-card" style="border-color:rgba(247,215,116,.4)">
+        <div class="admin-card-title" style="color:var(--gold)">🚀 アンケートを出す</div>
+
+        <!-- 今すぐ出す -->
+        <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:8px">今すぐ出す</div>
+          <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">終了日時</label>
+          <input class="admin-input" type="datetime-local" id="endDateNow" style="margin-bottom:10px">
+          <button class="admin-btn gold" style="width:100%;height:44px" onclick="startSurveyNow()">▶ 今すぐアンケートを開始する</button>
+        </div>
+
+        <!-- 予約決定 -->
+        <div style="background:var(--bg3);border-radius:10px;padding:12px">
+          <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:8px">予約決定</div>
+          <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">開始日時</label>
+          <input class="admin-input" type="datetime-local" id="startDateReserve" style="margin-bottom:8px">
+          <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">終了日時</label>
+          <input class="admin-input" type="datetime-local" id="endDateReserve" style="margin-bottom:10px">
+          <button class="admin-btn blue" style="width:100%;height:44px" onclick="reserveSurvey()">📅 予約を確定する</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- メンバー管理 -->
@@ -632,11 +653,17 @@ function initFirebase(){
   fbDb.ref(DB_SURVEY).on('value', snap=>{
     const d = snap.val();
     if(!d) return;
-    PUBLIC_SURVEY.status  = d.status  || 'open';
-    PUBLIC_SURVEY.endedAt = d.endedAt || null;
-    PUBLIC_SURVEY.title   = d.title   || PUBLIC_SURVEY.title;
-    currentSurveyId       = d.id      || currentSurveyId;
+    PUBLIC_SURVEY.status        = d.status        || 'none';
+    PUBLIC_SURVEY.endedAt       = d.endedAt       || null;
+    PUBLIC_SURVEY.deadline      = d.deadline      || null;
+    PUBLIC_SURVEY.startedAt     = d.startedAt     || null;
+    PUBLIC_SURVEY.reservedStart = d.reservedStart || null;
+    PUBLIC_SURVEY.title         = d.title         || PUBLIC_SURVEY.title;
+    if(d.activeRoles) ADMIN_CONFIG.activeRoles = d.activeRoles;
+    currentSurveyId = d.id || currentSurveyId;
+    updateAdminStatusUI();
     applyPublicSurveyState();
+    startSurveyTimer();
   });
 
   // 座席データをリアルタイム同期
@@ -748,9 +775,10 @@ function sameLocalDate(a,b){
     && da.getDate()===db.getDate();
 }
 function getPublicState(){
-  if(PUBLIC_SURVEY.status === 'open') return 'open';
+  if(PUBLIC_SURVEY.status === 'open')     return 'open';
   if(PUBLIC_SURVEY.status === 'published') return 'published';
-  if(PUBLIC_SURVEY.status === 'closed' && sameLocalDate(PUBLIC_SURVEY.endedAt, new Date())) return 'closed_today';
+  if(PUBLIC_SURVEY.status === 'closed')   return 'closed';
+  if(PUBLIC_SURVEY.status === 'reserved') return 'none'; // 予約済・未開始は「未実施」表示
   return 'none';
 }
 function isSurveyOpen(){ return getPublicState() === 'open'; }
@@ -758,30 +786,35 @@ function applyPublicSurveyState(){
   const state = getPublicState();
   const overlay = document.getElementById('stateOverlay');
   const reg = document.getElementById('registerOverlay');
-  document.body.classList.toggle('public-locked', state !== 'open');
+
+  // 管理者はログイン済みならすり抜け
+  if(adminLoggedIn){
+    overlay.classList.remove('open');
+    document.body.classList.remove('public-locked');
+    return;
+  }
 
   if(state === 'open'){
+    // 受付中：通行止めを外して登録ポップアップを出す
     overlay.classList.remove('open');
-    // 未登録なら通常どおり参加登録を出す
+    document.body.classList.remove('public-locked');
     if(!userName && reg) reg.style.display = 'flex';
     return;
   }
 
+  // 通行止め
+  document.body.classList.add('public-locked');
   if(reg) reg.style.display = 'none';
   overlay.classList.add('open');
 
-  if(state === 'closed_today'){
+  if(state === 'closed'){
     document.getElementById('stateIcon').textContent = '⏰';
     document.getElementById('stateTitle').textContent = '今回のアンケートは終了しました。';
-    document.getElementById('stateMessage').textContent = '結果発表までお待ちください。一般メンバーは回答・変更できません。';
-  }else if(state === 'published'){
-    document.getElementById('stateIcon').textContent = '📋';
-    document.getElementById('stateTitle').textContent = '結果公開中です。';
-    document.getElementById('stateMessage').textContent = '確定表を確認してください。変更は管理者のみ可能です。';
-  }else{
+    document.getElementById('stateMessage').textContent = '結果発表までお待ちください。';
+  } else {
     document.getElementById('stateIcon').textContent = 'ℹ️';
-    document.getElementById('stateTitle').textContent = '現在実施中のアンケートはありません。';
-    document.getElementById('stateMessage').textContent = '募集が開始されるまでお待ちください。一般メンバーは操作できません。';
+    document.getElementById('stateTitle').textContent = 'アンケートは実施されていません。';
+    document.getElementById('stateMessage').textContent = '募集が開始されるまでお待ちください。';
   }
 }
 
@@ -1212,11 +1245,15 @@ function openAdmin(){
   openAdminPanel();
 }
 function openAdminPanel(){
+  // 管理者ログイン済みなら通行止めを解除
+  applyPublicSurveyState();
+  updateAdminStatusUI();
   renderPriorityList();
   buildResults();
   renderAdminMembers();
   renderAdminQuestions();
   document.getElementById('adminScreen').classList.add('open');
+  startSurveyTimer();
 }
 function loginAdmin(){
   const input = document.getElementById('adminPasswordInput').value.trim();
@@ -1338,22 +1375,146 @@ function setDeadlineMode(mode){
   document.getElementById('deadline-auto-area').style.display = mode==='auto'?'':'none';
   document.getElementById('deadline-manual-area').style.display = mode==='manual'?'':'none';
 }
-function saveDeadline(){
-  const v = document.getElementById('deadlineInput').value;
-  if(!v){ alert('日時を選択してください'); return; }
-  alert('締切を設定しました：'+v.replace('T',' '));
+// アンケート状態をDBに保存
+function saveSurveyToDB(data){
+  if(!fbDb) return;
+  fbDb.ref(DB_SURVEY).update(data).catch(e=>console.warn("survey save failed",e));
 }
+
+// 今すぐ開始
+function startSurveyNow(){
+  const end = document.getElementById('endDateNow').value;
+  if(!end){ alert('終了日時を入力してください'); return; }
+  if(!confirm('今すぐアンケートを開始しますか？')) return;
+
+  // 官職設定を反映
+  saveRoleSettings();
+
+  PUBLIC_SURVEY.status    = 'open';
+  PUBLIC_SURVEY.startedAt = new Date().toISOString();
+  PUBLIC_SURVEY.deadline  = end;
+  PUBLIC_SURVEY.endedAt   = null;
+
+  saveSurveyToDB({
+    status   : 'open',
+    startedAt: PUBLIC_SURVEY.startedAt,
+    deadline : end,
+    endedAt  : null,
+    activeRoles: ADMIN_CONFIG.activeRoles,
+  });
+  saveConfigToDB();
+
+  updateAdminStatusUI();
+  applyPublicSurveyState();
+  startSurveyTimer();
+  alert('アンケートを開始しました！');
+}
+
+// 予約決定
+function reserveSurvey(){
+  const start = document.getElementById('startDateReserve').value;
+  const end   = document.getElementById('endDateReserve').value;
+  if(!start || !end){ alert('開始・終了日時を入力してください'); return; }
+  if(new Date(start) >= new Date(end)){ alert('終了日時は開始日時より後にしてください'); return; }
+  if(!confirm(`${start.replace('T',' ')} にアンケートを開始予約しますか？`)) return;
+
+  saveRoleSettings();
+
+  PUBLIC_SURVEY.status      = 'reserved';
+  PUBLIC_SURVEY.reservedStart = start;
+  PUBLIC_SURVEY.deadline    = end;
+
+  saveSurveyToDB({
+    status        : 'reserved',
+    reservedStart : start,
+    deadline      : end,
+    endedAt       : null,
+    activeRoles   : ADMIN_CONFIG.activeRoles,
+  });
+  saveConfigToDB();
+
+  updateAdminStatusUI();
+  startSurveyTimer();
+  alert(`予約を確定しました。
+開始: ${start.replace('T',' ')}
+終了: ${end.replace('T',' ')}`);
+}
+
+// 手動締切
 function manualClose(){
   if(!confirm('今すぐアンケートを締め切りますか？')) return;
-  PUBLIC_SURVEY.status = 'closed';
+  PUBLIC_SURVEY.status  = 'closed';
   PUBLIC_SURVEY.endedAt = new Date().toISOString();
-  const badge = document.getElementById('adminStatusBadge');
-  if(badge){ badge.textContent='締切済'; badge.style.color='#f59e0b'; }
-  if(fbDb){
-    fbDb.ref(DB_SURVEY).update({status:'closed', endedAt:PUBLIC_SURVEY.endedAt})
-      .catch(e=>console.warn("survey close failed",e));
-  }
+  saveSurveyToDB({status:'closed', endedAt:PUBLIC_SURVEY.endedAt});
+  updateAdminStatusUI();
   applyPublicSurveyState();
+}
+
+// 管理者ステータスUI更新
+function updateAdminStatusUI(){
+  const badge = document.getElementById('adminStatusBadge');
+  const info  = document.getElementById('adminDeadlineInfo');
+  const closeBtn = document.getElementById('btnManualClose');
+  if(!badge) return;
+  const s = PUBLIC_SURVEY.status;
+  if(s === 'open'){
+    badge.textContent = '受付中';
+    badge.style.color = '#22c55e';
+    if(info) info.textContent = PUBLIC_SURVEY.deadline
+      ? '締切: ' + PUBLIC_SURVEY.deadline.replace('T',' ')
+      : '';
+    if(closeBtn) closeBtn.style.display = '';
+  } else if(s === 'reserved'){
+    badge.textContent = '開始予約済';
+    badge.style.color = '#60a5fa';
+    if(info) info.textContent =
+      '開始: ' + (PUBLIC_SURVEY.reservedStart||'').replace('T',' ') +
+      '　終了: ' + (PUBLIC_SURVEY.deadline||'').replace('T',' ');
+    if(closeBtn) closeBtn.style.display = 'none';
+  } else if(s === 'closed'){
+    badge.textContent = '終了済';
+    badge.style.color = '#f59e0b';
+    if(info) info.textContent = PUBLIC_SURVEY.endedAt
+      ? '終了: ' + PUBLIC_SURVEY.endedAt.replace('T',' ').slice(0,16)
+      : '';
+    if(closeBtn) closeBtn.style.display = 'none';
+  } else {
+    badge.textContent = '未実施';
+    badge.style.color = '#6b7280';
+    if(info) info.textContent = '';
+    if(closeBtn) closeBtn.style.display = 'none';
+  }
+}
+
+// 自動開始・終了タイマー
+let surveyTimer = null;
+function startSurveyTimer(){
+  if(surveyTimer) clearInterval(surveyTimer);
+  surveyTimer = setInterval(()=>{
+    const now = new Date();
+    const s = PUBLIC_SURVEY.status;
+
+    // 予約開始チェック
+    if(s === 'reserved' && PUBLIC_SURVEY.reservedStart){
+      if(now >= new Date(PUBLIC_SURVEY.reservedStart)){
+        PUBLIC_SURVEY.status = 'open';
+        saveSurveyToDB({status:'open', startedAt:new Date().toISOString()});
+        updateAdminStatusUI();
+        applyPublicSurveyState();
+      }
+    }
+
+    // 自動締切チェック
+    if(s === 'open' && PUBLIC_SURVEY.deadline){
+      if(now >= new Date(PUBLIC_SURVEY.deadline)){
+        PUBLIC_SURVEY.status  = 'closed';
+        PUBLIC_SURVEY.endedAt = new Date().toISOString();
+        saveSurveyToDB({status:'closed', endedAt:PUBLIC_SURVEY.endedAt});
+        updateAdminStatusUI();
+        applyPublicSurveyState();
+      }
+    }
+  }, 5000); // 5秒ごとにチェック
 }
 
 function getLatestClosedSurvey(){
