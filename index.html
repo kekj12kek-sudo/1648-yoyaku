@@ -714,6 +714,17 @@ function initFirebase(){
   if(!fbDb) return;
 
   // 設定を読み込み
+  // surveysコレクションをリアルタイム監視（メイン）
+  fbDb.ref('surveys').on('value', snap=>{
+    surveysMap = snap.val() || {};
+    // 回答者：一覧を更新
+    if(!adminLoggedIn && !surveySelected) renderSurveyList();
+    // 管理者：ボードを更新
+    if(adminLoggedIn) renderAdminSurveyList();
+    // タイマー起動
+    startSurveyTimer();
+  });
+
   fbDb.ref(DB_CONFIG).on('value', snap=>{
     const d = snap.val();
     if(!d) return;
@@ -1621,11 +1632,14 @@ function saveSurveyToDB(surveyId, data){
 
 // アンケートを新規作成してDBに保存
 function createSurveyInDB(surveyData){
-  if(!fbDb) return;
   const id = surveyData.id;
-  fbDb.ref(`surveys/${id}`).set(surveyData).catch(e=>console.warn("survey create failed",e));
-  // 5件超なら古いものを自動削除
+  surveysMap[id] = surveyData; // ローカルに即反映
+  if(fbDb){
+    fbDb.ref(`surveys/${id}`).set(surveyData).catch(e=>console.warn("survey create failed",e));
+  }
   pruneOldSurveys();
+  // 管理者ボードを更新
+  renderAdminSurveyList();
 }
 
 // 5件超の古いアンケートを自動削除
