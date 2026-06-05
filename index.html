@@ -468,6 +468,14 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
             <div class="admin-info" style="margin-top:6px;margin-bottom:10px">※ポイントは管理者のみ確認できます</div>
             <button class="admin-btn blue" style="width:100%;height:40px;margin-bottom:10px" onclick="saveAdminSurveySettings()">💾 設定を保存する</button>
           </div>
+
+          <!-- 加点項目プール管理 -->
+          <div class="admin-card">
+            <div class="admin-card-title">⭐ 加点項目プール（最大4つ有効化）</div>
+            <div class="admin-info" style="margin-bottom:8px">チェックした項目（最大4つ）が回答者加点タブに表示されます。</div>
+            <div id="bonusItemList"></div>
+            <button class="admin-btn green admin-btn sm" style="width:100%;margin-top:8px" onclick="addBonusItem()">＋ 項目を追加</button>
+          </div>
           <div class="admin-card" style="border-color:rgba(247,215,116,.3)">
             <div class="admin-card-title" style="color:var(--gold)">🚀 アンケートを出す</div>
             <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px">
@@ -616,7 +624,15 @@ const ADMIN_CONFIG = {
         { text: "100日未満", pt: -1 },
       ]
     }
-  ]
+  ],
+  // 加点項目プール
+  bonusItems: [
+    { id:'b_rally_s', label:'集結主',    max:5, enabled:true  },
+    { id:'b_rally_a', label:'準集結主',  max:5, enabled:true  },
+    { id:'b_svs',     label:'SVS貢献度', max:5, enabled:true  },
+    { id:'b_t12s',    label:'T12スキル', max:5, enabled:false },
+  ],
+  get activeBonusItems(){ return this.bonusItems.filter(b=>b.enabled).slice(0,4); }
 };
 
 // ===================================================
@@ -945,13 +961,21 @@ function calcBasePoint(answers){
 }
 function getPointRecord(name){
   const raw = manualPoints[name];
-  if(raw && typeof raw === 'object') return { main:Number(raw.main||0), svs:Number(raw.svs||0) };
-  // 旧形式の数値データが残っていた場合の互換
-  return { main:Number(raw||0), svs:0 };
+  if(!raw) return {};
+  if(typeof raw === 'object') return raw;
+  // 旧形式互換
+  return { b_rally_s: Number(raw||0) };
 }
-function getMainPoint(name){ return getPointRecord(name).main; }
-function getSvsPoint(name){ return getPointRecord(name).svs; }
-function getManualPoint(name){ const p=getPointRecord(name); return p.main + p.svs; }
+function getBonusPoint(name, itemId){
+  return Number(getPointRecord(name)[itemId] || 0);
+}
+function getManualPoint(name){
+  const rec = getPointRecord(name);
+  return ADMIN_CONFIG.bonusItems.reduce((sum, b) => sum + Number(rec[b.id]||0), 0);
+}
+// 後方互換
+function getMainPoint(name){ return getBonusPoint(name, 'b_rally_s') + getBonusPoint(name, 'b_rally_a'); }
+function getSvsPoint(name){ return getBonusPoint(name, 'b_svs'); }
 function calcTotalPoint(sub){ return calcBasePoint(sub.answers || {}) + getManualPoint(sub.name); }
 function choiceText(qid, answers){
   const q = ADMIN_CONFIG.questions.find(x=>x.id===qid);
@@ -1685,6 +1709,67 @@ function toggleAdminAllyRally(i){ adminMembers[i].isAlly=!adminMembers[i].isAlly
 function changeAdminSvs(i,d){ adminMembers[i].svsPt=Math.max(0,Math.min(3,(adminMembers[i].svsPt||0)+d)); renderAdminMembers(); saveMembersToDB(); }
 
 // 管理者質問編集
+// ===== 加点項目プール管理 =====
+function renderBonusItemList(){
+  const list = document.getElementById('bonusItemList');
+  if(!list) return;
+  list.innerHTML = '';
+  const activeCount = ADMIN_CONFIG.bonusItems.filter(b=>b.enabled).length;
+  ADMIN_CONFIG.bonusItems.forEach((item, i)=>{
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);';
+    const canEnable = item.enabled || activeCount < 4;
+    div.innerHTML = `
+      <input type="checkbox" ${item.enabled?'checked':''} ${!canEnable?'disabled':''}
+        onchange="toggleBonusItem(${i},this.checked)"
+        style="width:18px;height:18px;cursor:pointer;flex-shrink:0">
+      <input class="admin-input" style="flex:1;height:34px;font-size:12px"
+        value="${escapeHtml(item.label)}"
+        onchange="ADMIN_CONFIG.bonusItems[${i}].label=this.value;saveBonusItems()">
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+        <span style="font-size:11px;color:var(--text2)">max</span>
+        <input type="number" class="admin-input" style="width:48px;height:34px;font-size:12px;text-align:center"
+          value="${item.max}" min="1" max="9"
+          onchange="ADMIN_CONFIG.bonusItems[${i}].max=parseInt(this.value)||1;saveBonusItems()" max="5">
+        <span style="font-size:11px;color:var(--text2)">pt</span>
+      </div>
+      <button class="admin-btn red admin-btn sm" style="padding:0;width:28px;height:28px;flex-shrink:0"
+        onclick="removeBonusItem(${i})">✕</button>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function toggleBonusItem(i, checked){
+  const activeCount = ADMIN_CONFIG.bonusItems.filter(b=>b.enabled).length;
+  if(checked && activeCount >= 4){ alert('有効にできる項目は最大4つです。'); renderBonusItemList(); return; }
+  ADMIN_CONFIG.bonusItems[i].enabled = checked;
+  saveBonusItems();
+  renderBonusItemList();
+}
+
+function addBonusItem(){
+  ADMIN_CONFIG.bonusItems.push({ id:'b_custom_'+Date.now(), label:'新しい項目', max:2, enabled:false });
+  saveBonusItems();
+  renderBonusItemList();
+}
+
+function removeBonusItem(i){
+  if(!confirm(`「${ADMIN_CONFIG.bonusItems[i].label}」を削除しますか？`)) return;
+  ADMIN_CONFIG.bonusItems.splice(i,1);
+  saveBonusItems();
+  renderBonusItemList();
+}
+
+function saveBonusItems(){
+  const s = getEditSurvey();
+  if(s){
+    s.bonusItems = JSON.parse(JSON.stringify(ADMIN_CONFIG.bonusItems));
+    saveSurveyToDB(s.id, {bonusItems: s.bonusItems});
+  }
+  showToast('✓ 加点項目を保存しました');
+}
+
 function renderAdminQuestions(){
   const list = document.getElementById('adminQuestionList');
   if(!list) return;
@@ -1885,10 +1970,11 @@ function manualClose(){
 function saveAdminSurveySettings(){
   const s = getEditSurvey();
   if(!s){ alert('アンケートを選択してください'); return; }
-  s.title     = document.getElementById('editSurveyTitle')?.value.trim() || s.title;
-  s.role      = getEditSurveyRole();
-  s.questions = JSON.parse(JSON.stringify(ADMIN_CONFIG.questions));
-  saveSurveyToDB(s.id, {title:s.title, role:s.role, questions:s.questions});
+  s.title      = document.getElementById('editSurveyTitle')?.value.trim() || s.title;
+  s.role       = getEditSurveyRole();
+  s.questions  = JSON.parse(JSON.stringify(ADMIN_CONFIG.questions));
+  s.bonusItems = JSON.parse(JSON.stringify(ADMIN_CONFIG.bonusItems));
+  saveSurveyToDB(s.id, {title:s.title, role:s.role, questions:s.questions, bonusItems:s.bonusItems});
   showToast('✓ 設定を保存しました');
 }
 
@@ -1998,27 +2084,27 @@ function getSubmissionByName(name){
 }
 function renderPriorityList(){
   const box = document.getElementById('priorityList');
+  if(!box) return;
   box.innerHTML = `<div class="poll-scope-note">対象：${escapeHtml(getTargetSurveyLabel())}</div>`;
   const names = getApplicantNames();
-  if(names.length===0){
-    box.innerHTML += '<div class="empty-admin">終了済みの直近アンケートに申請データがありません。</div>';
+  if(!names.length){
+    box.innerHTML += '<div class="empty-admin">回答者がいません</div>';
     return;
   }
 
-  // ポイント順でソート
+  const activeBonus = ADMIN_CONFIG.activeBonusItems;
+
   const sorted = [...names].sort((a,b)=>{
     const subA = getSubmissionByName(a), subB = getSubmissionByName(b);
-    const ptA = (subA ? calcBasePoint(subA.answers||{}) : 0) + getMainPoint(a) + getSvsPoint(a);
-    const ptB = (subB ? calcBasePoint(subB.answers||{}) : 0) + getMainPoint(b) + getSvsPoint(b);
+    const ptA = (subA ? calcBasePoint(subA.answers||{}) : 0) + getManualPoint(a);
+    const ptB = (subB ? calcBasePoint(subB.answers||{}) : 0) + getManualPoint(b);
     return ptB - ptA;
   });
 
   sorted.forEach((name, idx)=>{
-    const sub = getSubmissionByName(name);
+    const sub  = getSubmissionByName(name);
     const base = sub ? calcBasePoint(sub.answers||{}) : 0;
-    const mainPt = getMainPoint(name);
-    const svsPt = getSvsPoint(name);
-    const total = base + mainPt + svsPt;
+    const total = base + getManualPoint(name);
     const accel = sub ? choiceText('q1', sub.answers||{}) : '申請なし';
     const safeName = escapeAttr(name);
 
@@ -2033,6 +2119,27 @@ function renderPriorityList(){
       });
     }
 
+    // 加点項目行を生成
+    const bonusRows = activeBonus.map(item=>{
+      const val = getBonusPoint(name, item.id);
+      return `
+        <div class="applicant-ctrl-row">
+          <div class="applicant-ctrl-label" style="min-width:72px">${escapeHtml(item.label)}</div>
+          <div class="applicant-svs">
+            <button class="step-btn" onclick="stepBonusPoint('${safeName}','${item.id}',-1)">−</button>
+            <div class="applicant-svs-val" id="bval-${idx}-${item.id}">${val}</div>
+            <button class="step-btn" onclick="stepBonusPoint('${safeName}','${item.id}',1)">＋</button>
+            <div style="font-size:11px;color:var(--text2);margin-left:4px">+${val}pt / max${item.max}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // ポイント内訳チップ
+    const bonusChips = activeBonus.map(item=>{
+      const v = getBonusPoint(name, item.id);
+      return v > 0 ? `<span class="applicant-pt-chip">${escapeHtml(item.label)} +${v}</span>` : '';
+    }).join('');
+
     const card = document.createElement('div');
     card.className = 'applicant-card';
     card.innerHTML = `
@@ -2043,27 +2150,10 @@ function renderPriorityList(){
       </div>
       <div class="applicant-card-accel">加速: ${escapeHtml(accel)}</div>
       <div class="applicant-prefs">${prefTagsHtml}</div>
-      <div class="applicant-ctrl-row">
-        <div class="applicant-ctrl-label">集結主</div>
-        <div class="applicant-seg">
-          <button class="applicant-seg-btn ${mainPt===0?'on-none':''}" onclick="setMainPoint('${safeName}',0)">なし</button>
-          <button class="applicant-seg-btn ${mainPt===1?'on-jun':''}" onclick="setMainPoint('${safeName}',1)">準+1</button>
-          <button class="applicant-seg-btn ${mainPt===2?'on-main':''}" onclick="setMainPoint('${safeName}',2)">集結+2</button>
-        </div>
-      </div>
-      <div class="applicant-ctrl-row">
-        <div class="applicant-ctrl-label">SVS</div>
-        <div class="applicant-svs">
-          <button class="step-btn" onclick="stepSvsPoint('${safeName}',-1)">−</button>
-          <div class="applicant-svs-val" id="svsval-${idx}">${svsPt}</div>
-          <button class="step-btn" onclick="stepSvsPoint('${safeName}',1)">＋</button>
-          <div style="font-size:11px;color:var(--text2);margin-left:4px">+${svsPt}pt</div>
-        </div>
-      </div>
+      ${bonusRows}
       <div class="applicant-pt-row">
         <span class="applicant-pt-chip">加速 +${base}</span>
-        <span class="applicant-pt-chip">集結 +${mainPt}</span>
-        <span class="applicant-pt-chip">SVS +${svsPt}</span>
+        ${bonusChips}
         <span class="applicant-pt-chip total">合計 ${total}pt</span>
       </div>
     `;
@@ -2071,21 +2161,29 @@ function renderPriorityList(){
   });
 }
 
+
 function stepSvsPoint(name, delta){
-  const p = getPointRecord(name);
-  p.svs = Math.max(0, Math.min(3, (p.svs||0) + delta));
-  manualPoints[name] = p;
+  stepBonusPoint(name, 'b_svs', delta);
+}
+function setMainPoint(name, val){
+  // 後方互換用（既存コードから呼ばれる場合）
+  setBonusPoint(name, 'b_rally_s', val);
+}
+
+function setBonusPoint(name, itemId, val){
+  const rec = getPointRecord(name);
+  const item = ADMIN_CONFIG.bonusItems.find(b=>b.id===itemId);
+  const max = item ? item.max : 99;
+  rec[itemId] = Math.max(0, Math.min(max, Number(val||0)));
+  manualPoints[name] = rec;
   saveManualPointsToDB();
   renderPriorityList();
   buildResults();
 }
-function setMainPoint(name, val){
-  const p = getPointRecord(name);
-  p.main = Number(val || 0);
-  manualPoints[name] = p;
-  saveManualPointsToDB();
-  renderPriorityList();
-  buildResults();
+
+function stepBonusPoint(name, itemId, delta){
+  const cur = getBonusPoint(name, itemId);
+  setBonusPoint(name, itemId, cur + delta);
 }
 function setSvsPoint(name, val){
   const p = getPointRecord(name);
@@ -2450,6 +2548,9 @@ function openEditPanel(surveyId){
   // 質問
   if(s.questions) ADMIN_CONFIG.questions = JSON.parse(JSON.stringify(s.questions));
   renderAdminQuestions();
+  // 加点項目
+  if(s.bonusItems) ADMIN_CONFIG.bonusItems = JSON.parse(JSON.stringify(s.bonusItems));
+  renderBonusItemList();
 
   // ステータスバッジ
   const badge = document.getElementById('editStatusBadge');
