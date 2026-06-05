@@ -157,7 +157,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 .btn-close-complete{width:100%;height:48px;border-radius:10px;border:1px solid #22c55e;background:#166534;color:#86efac;font-size:15px;font-weight:900;cursor:pointer;}
 
 /* 登録画面 */
-.register-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;}
+.register-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:none;align-items:center;justify-content:center;padding:20px;}
 .register-box{background:var(--bg2);border:2px solid var(--gold);border-radius:16px;padding:24px;width:100%;max-width:340px;}
 .register-box h2{color:var(--gold);font-size:18px;margin-bottom:6px;text-align:center;}
 .register-box p{color:var(--text2);font-size:12px;margin-bottom:16px;line-height:1.6;text-align:center;}
@@ -277,9 +277,9 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
 .survey-card-badge.closed{background:rgba(239,68,68,.2);border:1px solid #ef4444;color:#fca5a5;}
 .survey-card-meta{font-size:11px;color:var(--text2);}
 .state-deadline{margin-top:10px;font-size:13px;color:var(--gold);font-weight:700;text-align:center;padding:8px 12px;background:rgba(247,215,116,.1);border:1px solid rgba(247,215,116,.3);border-radius:8px;}
-.state-overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:24px;}
+.state-overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.85);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
 .state-overlay.open{display:flex;}
-.state-popup{background:var(--bg2);border:2px solid var(--border);border-radius:20px;padding:28px 20px;width:100%;max-width:320px;text-align:center;}
+.state-popup{background:var(--bg2);border:2px solid var(--border);border-radius:20px;padding:24px 20px;width:100%;max-width:340px;text-align:center;max-height:90vh;overflow-y:auto;}
 .state-icon{font-size:48px;margin-bottom:12px;}
 .state-title{font-size:17px;font-weight:900;color:var(--text);margin-bottom:8px;line-height:1.4;}
 .state-message{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
@@ -309,7 +309,7 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
     <div class="state-message" id="stateMessage"></div>
     <div id="surveyListArea"></div>
     <button class="state-back-btn" style="margin-top:12px" onclick="location.href='https://kekj12kek-sudo.github.io/1648-hq/'">← HQに戻る</button>
-    <button onclick="openAdmin()" style="width:100%;height:36px;margin-top:8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:11px;cursor:pointer;">管理者はこちら</button>
+    <button onclick="openAdmin()" style="width:100%;height:36px;margin-top:8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:11px;cursor:pointer;position:relative;z-index:500;">管理者はこちら</button>
   </div>
 </div>
 
@@ -616,6 +616,7 @@ const ADMIN_CONFIG = {
 let surveysMap = {};        // {surveyId: surveyData}
 let currentSurveyId = '';   // 回答者が選択中のアンケートID
 let adminEditSurveyId = '';  // 管理者が編集中のアンケートID
+let surveySelected = false;  // 回答者がアンケートを選択済みかどうか
 
 // 後方互換：PUBLIC_SURVEYは廃止・surveysMapから動的取得
 function getPublicSurvey(id){
@@ -916,47 +917,14 @@ function sameLocalDate(a,b){
 function getPublicState(){ return 'none'; }
 function isSurveyOpen(){ return getPublicState() === 'open'; }
 function applyPublicSurveyState(){
-  const state = getPublicState();
-  const overlay = document.getElementById('stateOverlay');
-  const reg = document.getElementById('registerOverlay');
-
-  // 管理者はログイン済みならすり抜け
   if(adminLoggedIn){
-    overlay.classList.remove('open');
+    document.getElementById('stateOverlay').classList.remove('open');
     document.body.classList.remove('public-locked');
     return;
   }
-
-  if(state === 'open'){
-    // 受付中：通行止めを外して登録ポップアップを出す
-    overlay.classList.remove('open');
-    document.body.classList.remove('public-locked');
-    if(!userName && reg){
-      buildQuestions();
-      reg.style.display = 'flex';
-    }
-    return;
-  }
-
-  // 通行止め
-  document.body.classList.add('public-locked');
-  if(reg) reg.style.display = 'none';
-  overlay.classList.add('open');
-
-  if(state === 'closed'){
-    document.getElementById('stateIcon').textContent = '⏰';
-    document.getElementById('stateTitle').textContent = '今回のアンケートは終了しました。';
-    document.getElementById('stateMessage').textContent = '結果発表までお待ちください。';
-  } else {
-    document.getElementById('stateIcon').textContent = 'ℹ️';
-    document.getElementById('stateTitle').textContent = 'アンケートは実施されていません。';
-    document.getElementById('stateMessage').textContent = '募集が開始されるまでお待ちください。';
-  }
+  renderSurveyList();
 }
 
-// ===================================================
-// 役職タブ
-// ===================================================
 function buildRoleTabs(){
   const tabs = document.getElementById('roleTabs');
   tabs.innerHTML = '';
@@ -2434,6 +2402,9 @@ function deleteEditSurvey(){
 
 // ===== 回答者：アンケート一覧画面 =====
 function renderSurveyList(){
+  // アンケート選択済み・管理者ログイン済みなら一覧を表示しない
+  if(surveySelected || adminLoggedIn) return;
+
   const area = document.getElementById('surveyListArea');
   if(!area) return;
   const visible = getVisibleSurveys();
@@ -2442,6 +2413,7 @@ function renderSurveyList(){
     document.getElementById('stateTitle').textContent = '1648 官職予約 EXPRESS';
     document.getElementById('stateMessage').textContent = '現在実施中のアンケートはありません。';
     area.innerHTML = '';
+    document.getElementById('stateOverlay').classList.add('open');
     return;
   }
   document.getElementById('stateIcon').textContent = '📋';
@@ -2465,7 +2437,6 @@ function renderSurveyList(){
     }
     area.appendChild(card);
   });
-  // 常に一覧画面を表示
   document.getElementById('stateOverlay').classList.add('open');
 }
 
@@ -2473,6 +2444,7 @@ function renderSurveyList(){
 function selectSurvey(surveyId){
   const s = surveysMap[surveyId];
   if(!s || s.status !== 'open') return;
+  surveySelected = true;  // 一覧を再表示しないようにフラグセット
   currentSurveyId = surveyId;
 
   // 選択したアンケートの官職・質問を反映
