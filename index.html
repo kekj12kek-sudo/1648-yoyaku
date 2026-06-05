@@ -751,23 +751,39 @@ function initFirebase(){
 
   // アンケート状態はsurveysコレクションで管理
 
-    // 回答データを読み込み（管理者用・currentSurveyIdで取得）
-  function loadSubmissions(surveyId){
-    if(!surveyId) return;
-    fbDb.ref(`${DB_SUBMISSIONS}/${surveyId}`).on('value', snap=>{
-      const d = snap.val();
-      submissions = d ? Object.values(d) : [];
-      console.log("submissions loaded:", submissions.length);
+  // アンケートIDに紐づく全データを読み込む
+  let activeSubListener = null;
+  let activePtListener  = null;
+
+  function loadSurveyData(surveyId){
+    if(!fbDb || !surveyId) return;
+    // 前のリスナーを解除
+    if(activeSubListener) fbDb.ref(activeSubListener).off();
+    if(activePtListener)  fbDb.ref(activePtListener).off();
+
+    activeSubListener = `${DB_SUBMISSIONS}/${surveyId}`;
+    activePtListener  = `${DB_MANUALPTS}/${surveyId}`;
+
+    fbDb.ref(activeSubListener).on('value', snap=>{
+      submissions = snap.val() ? Object.values(snap.val()) : [];
       rebuildSeatsFromSubmissions(submissions);
       renderSeats();
       updateDecideBtn();
+      // 管理者画面が開いていれば自動更新
+      if(adminLoggedIn){
+        renderPriorityList();
+        buildResults();
+        buildPostText();
+      }
+    });
+
+    fbDb.ref(activePtListener).on('value', snap=>{
+      manualPoints = snap.val() || {};
+      if(adminLoggedIn) renderPriorityList();
     });
   }
-  loadSubmissions(currentSurveyId);
-  // surveyIdが変わったら再読み込み
-  window._loadSubmissions = loadSubmissions;
 
-  // manualPointsの読み込みはloadSurveyDataで統合済み
+  window._loadSurveyData = loadSurveyData;
 
   // メンバーリストを読み込み
   fbDb.ref(DB_MEMBERS).on('value', snap=>{
@@ -1325,23 +1341,33 @@ function confirmPref(){
   const {time, selectedPref} = popupTarget;
   if(!selectedPref) return;
   const role = currentRole;
+  const sid = currentSurveyId || role;
+  ensureSeatExists(sid);
 
+  // 既存の同じ希望を解除
   if(myReservations[selectedPref]){
     const old = myReservations[selectedPref];
-    const oldIdx = isMe[old.role][old.time].indexOf(true);
-    if(oldIdx>=0){ seats[old.role][old.time][oldIdx]=0; isMe[old.role][old.time][oldIdx]=false; }
+    const oldSid = old.surveyId || sid;
+    if(isMe[oldSid] && isMe[oldSid][old.time]){
+      const oldIdx = isMe[oldSid][old.time].indexOf(true);
+      if(oldIdx>=0){ seats[oldSid][old.time][oldIdx]=0; isMe[oldSid][old.time][oldIdx]=false; }
+    }
   }
-  const prevIdx = isMe[role][time].indexOf(true);
-  if(prevIdx>=0){
-    const prevPref = seats[role][time][prevIdx];
-    myReservations[prevPref]=null;
-    seats[role][time][prevIdx]=0; isMe[role][time][prevIdx]=false;
+  // 同じ時間帯の既存選択を解除
+  if(isMe[sid] && isMe[sid][time]){
+    const prevIdx = isMe[sid][time].indexOf(true);
+    if(prevIdx>=0){
+      const prevPref = seats[sid][time][prevIdx];
+      myReservations[prevPref]=null;
+      seats[sid][time][prevIdx]=0; isMe[sid][time][prevIdx]=false;
+    }
   }
-  const nextOpen = seats[role][time].indexOf(0);
+  // 次の空き枠に割り当て
+  const nextOpen = seats[sid][time].indexOf(0);
   if(nextOpen===-1){ closePopup(); return; }
-  seats[role][time][nextOpen]=selectedPref;
-  isMe[role][time][nextOpen]=true;
-  myReservations[selectedPref]={role, time, slotIdx:nextOpen};
+  seats[sid][time][nextOpen]=selectedPref;
+  isMe[sid][time][nextOpen]=true;
+  myReservations[selectedPref]={role, time, slotIdx:nextOpen, surveyId:sid};
 
   closePopup();
   renderSeats();
@@ -1513,6 +1539,16 @@ function goBackToSurveyList(){
   isOmakase = false;
   currentSurveyId = '';
   document.getElementById('userName').textContent = '👤 未登録';
+
+  // 座席の自分の選択をリセット
+  if(currentSurveyId && isMe[currentSurveyId]){
+    ALL_SLOTS.forEach(t=>{
+      if(!isMe[currentSurveyId][t]) return;
+      isMe[currentSurveyId][t].forEach((mine, idx)=>{
+        if(mine){ seats[currentSurveyId][t][idx]=0; isMe[currentSurveyId][t][idx]=false; }
+      });
+    });
+  }
 
   // 全画面を閉じる
   document.getElementById('completeOverlay').classList.remove('open');
