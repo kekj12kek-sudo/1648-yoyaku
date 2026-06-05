@@ -144,7 +144,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 .btn-decide.active{opacity:1;pointer-events:auto;box-shadow:0 4px 16px rgba(217,119,6,.4);}
 
 /* 完了画面 */
-.complete-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:400;align-items:center;justify-content:center;padding:20px;}
+.complete-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:450;align-items:center;justify-content:center;padding:20px;}
 .complete-overlay.open{display:flex;}
 .complete-box{background:var(--bg2);border:2px solid #22c55e;border-radius:20px;padding:32px 24px;width:100%;max-width:320px;text-align:center;animation:popIn .3s ease;}
 @keyframes popIn{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
@@ -277,16 +277,16 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
 .survey-card-badge.closed{background:rgba(239,68,68,.2);border:1px solid #ef4444;color:#fca5a5;}
 .survey-card-meta{font-size:11px;color:var(--text2);}
 .state-deadline{margin-top:10px;font-size:13px;color:var(--gold);font-weight:700;text-align:center;padding:8px 12px;background:rgba(247,215,116,.1);border:1px solid rgba(247,215,116,.3);border-radius:8px;}
-.state-overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:16px;}
+.state-overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.85);align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
 .state-overlay.open{display:flex;}
-.state-popup{background:var(--bg2);border:2px solid var(--border);border-radius:20px;padding:24px 20px;width:100%;max-width:340px;text-align:center;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.state-popup{background:var(--bg2);border:2px solid var(--border);border-radius:20px;padding:24px 20px;width:100%;max-width:340px;text-align:center;}
 .state-icon{font-size:48px;margin-bottom:12px;}
 .state-title{font-size:17px;font-weight:900;color:var(--text);margin-bottom:8px;line-height:1.4;}
 .state-message{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
 .state-back-btn{width:100%;height:48px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:14px;font-weight:700;cursor:pointer;}
 .state-back-btn:active{filter:brightness(.85);}
 /* ログインオーバーレイ */
-.admin-login-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.76);z-index:520;align-items:center;justify-content:center;padding:20px;}
+.admin-login-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:550;align-items:center;justify-content:center;padding:20px;}
 .admin-login-overlay.open{display:flex;}
 .admin-login-box{width:100%;max-width:320px;background:var(--bg2);border:2px solid var(--gold);border-radius:16px;padding:24px;}
 .admin-login-title{font-size:16px;font-weight:900;color:var(--gold);margin-bottom:6px;text-align:center;}
@@ -611,7 +611,7 @@ try{
 
 // DBパス
 const DB_CONFIG      = "config";           // 管理者設定・質問
-const DB_SURVEY      = "survey";           // アンケート状態
+// DB_SURVEY 廃止済み（surveysコレクションで管理）
 const DB_SEATS       = "seats";            // 座席データ（リアルタイム）
 const DB_SUBMISSIONS = "submissions";      // 回答データ
 const DB_MANUALPTS   = "manualPoints";     // 手動ポイント
@@ -952,8 +952,15 @@ function sameLocalDate(a,b){
     && da.getDate()===db.getDate();
 }
 // getPublicState は後方互換用（surveysMapで管理するため基本不使用）
-function getPublicState(){ return 'none'; }
-function isSurveyOpen(){ return getPublicState() === 'open'; }
+function getPublicState(){ return 'none'; } // 後方互換用
+function isSurveyOpen(){
+  // 回答者：選択中アンケートがopenか
+  if(currentSurveyId && surveysMap[currentSurveyId]){
+    return surveysMap[currentSurveyId].status === 'open';
+  }
+  // 1つでも実施中があればtrue
+  return Object.values(surveysMap).some(s => s.status === 'open');
+}
 function applyPublicSurveyState(){
   if(adminLoggedIn) return;
   renderSurveyList();
@@ -1468,12 +1475,11 @@ function showConfirm(){
     renderSeats();
   }
 
-// 他に実施中アンケートがあれば分岐ボタンを表示
+  // 他に実施中アンケートがあれば分岐ボタンを表示
   const otherSurveys = getVisibleSurveys().filter(s => s.id !== currentSurveyId && s.status === 'open');
   const btnOther = document.getElementById('btnGoSurveyList');
   if(btnOther) btnOther.style.display = otherSurveys.length ? '' : 'none';
   document.getElementById('completeOverlay').classList.add('open');
-}
 }
 
 function closeComplete(){
@@ -2317,8 +2323,12 @@ function buildResultRoleSeg(){
 function saveSurveyTitle(){
   const title = document.getElementById('surveyTitleInput')?.value.trim();
   if(!title) return;
-  PUBLIC_SURVEY.title = title;
-  saveSurveyToDB({title});
+  // 編集中アンケートのタイトルを更新
+  const s = getEditSurvey();
+  if(s){
+    s.title = title;
+    saveSurveyToDB(s.id, {title});
+  }
   const disp = document.getElementById('currentSurveyTitleDisplay');
   if(disp) disp.textContent = '保存済：' + title;
 }
