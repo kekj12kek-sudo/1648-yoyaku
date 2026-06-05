@@ -627,10 +627,10 @@ const ADMIN_CONFIG = {
   ],
   // 加点項目プール
   bonusItems: [
-    { id:'b_rally_s', label:'集結主',    max:5, enabled:true  },
-    { id:'b_rally_a', label:'準集結主',  max:5, enabled:true  },
-    { id:'b_svs',     label:'SVS貢献度', max:5, enabled:true  },
-    { id:'b_t12s',    label:'T12スキル', max:5, enabled:false },
+    { id:'b_rally_s', label:'集結主',    type:'fixed',  pt:2, enabled:true  },
+    { id:'b_rally_a', label:'準集結主',  type:'fixed',  pt:1, enabled:true  },
+    { id:'b_svs',     label:'SVS貢献度', type:'manual', max:5, enabled:true  },
+    { id:'b_t12s',    label:'T12スキル', type:'fixed',  pt:2, enabled:false },
   ],
   get activeBonusItems(){ return this.bonusItems.filter(b=>b.enabled).slice(0,4); }
 };
@@ -968,6 +968,12 @@ function getPointRecord(name){
 }
 function getBonusPoint(name, itemId){
   return Number(getPointRecord(name)[itemId] || 0);
+}
+
+function getBonusMax(itemId){
+  const item = ADMIN_CONFIG.bonusItems.find(b=>b.id===itemId);
+  if(!item) return 5;
+  return item.type === 'manual' ? (item.max||5) : (item.pt||1);
 }
 function getManualPoint(name){
   const rec = getPointRecord(name);
@@ -2119,19 +2125,36 @@ function renderPriorityList(){
       });
     }
 
-    // 加点項目行を生成
+    // 加点項目行を生成（固定値はON/OFF、手動入力はステッパー）
     const bonusRows = activeBonus.map(item=>{
       const val = getBonusPoint(name, item.id);
-      return `
-        <div class="applicant-ctrl-row">
-          <div class="applicant-ctrl-label" style="min-width:72px">${escapeHtml(item.label)}</div>
-          <div class="applicant-svs">
-            <button class="step-btn" onclick="stepBonusPoint('${safeName}','${item.id}',-1)">−</button>
-            <div class="applicant-svs-val" id="bval-${idx}-${item.id}">${val}</div>
-            <button class="step-btn" onclick="stepBonusPoint('${safeName}','${item.id}',1)">＋</button>
-            <div style="font-size:11px;color:var(--text2);margin-left:4px">+${val}pt / max${item.max}</div>
-          </div>
-        </div>`;
+      const isFixed = item.type !== 'manual';
+      if(isFixed){
+        const checked = val > 0;
+        return `
+          <div class="applicant-ctrl-row">
+            <div class="applicant-ctrl-label" style="min-width:80px">${escapeHtml(item.label)}</div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1">
+              <input type="checkbox" ${checked?'checked':''}
+                onchange="setBonusPoint('${safeName}','${item.id}',this.checked?${item.pt||1}:0)"
+                style="width:18px;height:18px;cursor:pointer">
+              <span style="font-size:12px;color:${checked?'var(--gold)':'var(--text2)'}">
+                ${checked?`+${item.pt||1}pt 付与中`:'なし'}
+              </span>
+            </label>
+          </div>`;
+      } else {
+        return `
+          <div class="applicant-ctrl-row">
+            <div class="applicant-ctrl-label" style="min-width:80px">${escapeHtml(item.label)}</div>
+            <div class="applicant-svs">
+              <button class="step-btn" onclick="stepBonusPoint('${safeName}','${item.id}',-1)">−</button>
+              <div class="applicant-svs-val">${val}</div>
+              <button class="step-btn" onclick="stepBonusPoint('${safeName}','${item.id}',1)">＋</button>
+              <div style="font-size:11px;color:var(--text2);margin-left:4px">+${val}pt</div>
+            </div>
+          </div>`;
+      }
     }).join('');
 
     // ポイント内訳チップ
@@ -2172,8 +2195,7 @@ function setMainPoint(name, val){
 
 function setBonusPoint(name, itemId, val){
   const rec = getPointRecord(name);
-  const item = ADMIN_CONFIG.bonusItems.find(b=>b.id===itemId);
-  const max = item ? item.max : 99;
+  const max = getBonusMax(itemId);
   rec[itemId] = Math.max(0, Math.min(max, Number(val||0)));
   manualPoints[name] = rec;
   saveManualPointsToDB();
