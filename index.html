@@ -304,11 +304,11 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
 <!-- 通行止めポップアップ -->
 <div class="state-overlay open" id="stateOverlay">
   <div class="state-popup">
-    <div class="state-icon" id="stateIcon">📋</div>
-    <div class="state-title" id="stateTitle">1648 官職予約 EXPRESS</div>
-    <div class="state-message" id="stateMessage"></div>
+    <div class="state-icon" id="stateIcon">ℹ️</div>
+    <div class="state-title" id="stateTitle">アンケートは実施されていません</div>
+    <div class="state-message" id="stateMessage">募集が開始されるまでお待ちください。</div>
     <div id="surveyListArea"></div>
-    <button class="state-back-btn" style="margin-top:12px" onclick="location.href='https://kekj12kek-sudo.github.io/1648-hq/'">← ホームに戻る</button>
+    <button class="state-back-btn" style="margin-top:16px" onclick="location.href='https://kekj12kek-sudo.github.io/1648-hq/'">← ホームに戻る</button>
     <button onclick="openAdmin()" style="width:100%;height:44px;margin-top:8px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;">管理者はこちら</button>
   </div>
 </div>
@@ -703,8 +703,8 @@ const clientId = getClientId();
 // ===================================================
 let submissions = [];
 let manualPoints = {};
-let surveys = [PUBLIC_SURVEY];
-let currentSurveyId = PUBLIC_SURVEY.id;
+let surveys = [];
+// currentSurveyId は上部で宣言済み
 let finalResults = [];
 
 // ===================================================
@@ -2483,8 +2483,6 @@ function buildResults(){
   renderResultList();
   buildPostText();
 }
-let benchList = [];
-
 function renderResultList(){
   const box = document.getElementById('resultList');
   box.innerHTML = '';
