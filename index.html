@@ -262,6 +262,10 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
 .applicant-pt-chip{font-size:10px;padding:2px 8px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--text2);}
 .applicant-pt-chip.total{border-color:var(--gold);color:var(--gold);font-weight:900;}
 .poll-scope-note{font-size:11px;color:var(--text2);padding:8px 10px;background:var(--bg);border-radius:8px;margin-bottom:10px;line-height:1.6;}
+.edit-tab{flex-shrink:0;padding:9px 14px;border-radius:8px 8px 0 0;border:none;background:var(--bg3);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;}
+.edit-tab.active{background:var(--bg2);color:var(--gold);border-bottom-color:var(--gold);}
+.edit-page{display:none;}
+.edit-page.active{display:block;}
 .empty-admin{background:var(--bg);border:1px dashed var(--border);border-radius:12px;padding:24px;text-align:center;color:var(--text3);font-size:13px;line-height:1.6;}
 .member-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:8px;}
 .member-row:last-child{border-bottom:none;}
@@ -423,135 +427,114 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
   <!-- ボディ -->
   <div class="admin-body">
 
-    <!-- 設定 -->
+    <!-- メインコンテンツ -->
     <div class="admin-page active" id="apage-settings">
 
-      <!-- アンケート一覧ボード -->
+      <!-- アンケート一覧（コンパクト） -->
       <div class="admin-card">
-        <div class="admin-card-title">📋 アンケート一覧（最大5件）</div>
+        <div class="admin-card-title">📋 アンケート一覧</div>
         <div id="adminSurveyList"></div>
-        <button class="admin-btn green" style="width:100%;margin-top:8px;height:36px" onclick="showNewSurveyPanel()">＋ 新しいアンケートを作成</button>
+        <button class="admin-btn green" style="width:100%;margin-top:8px;height:36px;font-size:12px" onclick="showNewSurveyPanel()">＋ 新しいアンケートを作成</button>
       </div>
 
-      <!-- 編集パネル（選択時に表示） -->
+      <!-- 選択中アンケートの操作エリア -->
       <div id="adminEditPanel" style="display:none">
 
-        <div class="admin-card" style="border-color:rgba(247,215,116,.4)">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-            <div class="admin-card-title" style="color:var(--gold);margin-bottom:0;border:none;padding:0" id="editPanelTitle">📝 新規作成</div>
-            <span id="editStatusBadge" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--bg3);color:var(--text2)"></span>
-          </div>
-
-          <!-- タイトル -->
-          <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">タイトル・番号</label>
-          <input class="admin-input" id="editSurveyTitle" placeholder="第1回 副執政官予約" style="margin-bottom:10px">
-
-          <!-- 官職 -->
-          <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px">対象官職</label>
-          <div class="seg" style="margin-bottom:10px">
-            <div class="seg-btn on" id="roleBtn-副執政官" onclick="selectEditRole('副執政官')">⚔️ 副執政官</div>
-            <div class="seg-btn" id="roleBtn-教育部長" onclick="selectEditRole('教育部長')">📚 教育部長</div>
-          </div>
-
-          <!-- 質問編集 -->
-          <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:700">質問編集（4択固定）</div>
-          <div id="adminQuestionList"></div>
-          <button class="admin-btn green" style="margin-top:6px;width:100%;height:34px;font-size:12px" onclick="addAdminQuestion()">＋ 質問を追加</button>
-          <div class="admin-info" style="margin-top:6px;margin-bottom:10px">※ポイントは管理者のみ確認できます</div>
-
-          <!-- 保存ボタン -->
-          <button class="admin-btn blue" style="width:100%;height:40px;margin-bottom:10px" onclick="saveAdminSurveySettings()">💾 設定を保存する</button>
+        <!-- 選択中アンケートのタブバー -->
+        <div style="display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none;">
+          <button class="edit-tab active" data-etab="edit-setup" onclick="switchEditTab(this)">設定</button>
+          <button class="edit-tab" data-etab="edit-priority" onclick="switchEditTab(this)">回答者加点</button>
+          <button class="edit-tab" data-etab="edit-result" onclick="switchEditTab(this)">時間別集計</button>
+          <button class="edit-tab" data-etab="edit-post" onclick="switchEditTab(this)">投稿文</button>
         </div>
 
-        <!-- アンケート開始 -->
-        <div class="admin-card" style="border-color:rgba(247,215,116,.3)">
-          <div class="admin-card-title" style="color:var(--gold)">🚀 アンケートを出す</div>
-          <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px">
-            <div style="font-size:13px;font-weight:900;margin-bottom:8px">今すぐ出す</div>
-            <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">終了日時</label>
-            <input class="admin-input" type="datetime-local" id="endDateNow" style="margin-bottom:10px">
-            <button class="admin-btn gold" style="width:100%;height:44px" onclick="startSurveyNow()">▶ 今すぐ開始する</button>
+        <!-- 設定タブ -->
+        <div class="edit-page active" id="edit-setup">
+          <div class="admin-card" style="border-color:rgba(247,215,116,.4)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <div class="admin-card-title" style="color:var(--gold);margin-bottom:0;border:none;padding:0" id="editPanelTitle">📝 新規作成</div>
+              <span id="editStatusBadge" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--bg3);color:var(--text2)"></span>
+            </div>
+            <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">タイトル</label>
+            <input class="admin-input" id="editSurveyTitle" placeholder="第1回 副執政官予約" style="margin-bottom:10px">
+            <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px">対象官職</label>
+            <div class="seg" style="margin-bottom:10px">
+              <div class="seg-btn on" id="roleBtn-副執政官" onclick="selectEditRole('副執政官')">⚔️ 副執政官</div>
+              <div class="seg-btn" id="roleBtn-教育部長" onclick="selectEditRole('教育部長')">📚 教育部長</div>
+            </div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:700">質問編集（4択固定）</div>
+            <div id="adminQuestionList"></div>
+            <button class="admin-btn green" style="margin-top:6px;width:100%;height:34px;font-size:12px" onclick="addAdminQuestion()">＋ 質問を追加</button>
+            <div class="admin-info" style="margin-top:6px;margin-bottom:10px">※ポイントは管理者のみ確認できます</div>
+            <button class="admin-btn blue" style="width:100%;height:40px;margin-bottom:10px" onclick="saveAdminSurveySettings()">💾 設定を保存する</button>
           </div>
-          <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px">
-            <div style="font-size:13px;font-weight:900;margin-bottom:8px">予約決定</div>
-            <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">開始日時</label>
-            <input class="admin-input" type="datetime-local" id="startDateReserve" style="margin-bottom:8px">
-            <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">終了日時</label>
-            <input class="admin-input" type="datetime-local" id="endDateReserve" style="margin-bottom:10px">
-            <button class="admin-btn blue" style="width:100%;height:44px" onclick="reserveSurvey()">📅 予約を確定する</button>
+          <div class="admin-card" style="border-color:rgba(247,215,116,.3)">
+            <div class="admin-card-title" style="color:var(--gold)">🚀 アンケートを出す</div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:900;margin-bottom:8px">今すぐ出す</div>
+              <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">終了日時</label>
+              <input class="admin-input" type="datetime-local" id="endDateNow" style="margin-bottom:10px">
+              <button class="admin-btn gold" style="width:100%;height:44px" onclick="startSurveyNow()">▶ 今すぐ開始する</button>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:900;margin-bottom:8px">予約決定</div>
+              <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">開始日時</label>
+              <input class="admin-input" type="datetime-local" id="startDateReserve" style="margin-bottom:8px">
+              <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">終了日時</label>
+              <input class="admin-input" type="datetime-local" id="endDateReserve" style="margin-bottom:10px">
+              <button class="admin-btn blue" style="width:100%;height:44px" onclick="reserveSurvey()">📅 予約を確定する</button>
+            </div>
+            <button class="admin-btn red" style="width:100%;height:40px;margin-bottom:10px" id="btnManualClose" onclick="manualClose()">🔒 今すぐ締め切る</button>
           </div>
-          <button class="admin-btn red" style="width:100%;height:40px" id="btnManualClose" onclick="manualClose()">🔒 今すぐ締め切る</button>
+          <div class="admin-card">
+            <button class="admin-btn red" style="width:100%;height:40px" onclick="deleteEditSurvey()">🗑 このアンケートを削除する</button>
+          </div>
         </div>
 
-        <!-- 削除 -->
-        <div class="admin-card">
-          <button class="admin-btn red" style="width:100%;height:40px" onclick="deleteEditSurvey()">🗑 このアンケートを削除する</button>
+        <!-- 回答者加点タブ -->
+        <div class="edit-page" id="edit-priority">
+          <div class="admin-card">
+            <div class="admin-card-title">📊 回答者加点</div>
+            <div class="admin-info" style="margin-bottom:8px">
+              <span style="color:var(--gold)">★代表集結主</span> +2　
+              <span style="color:#22c55e">●準集結主</span> +1　
+              <span style="color:#a78bfa">SVS</span> +1〜3（裁量）
+            </div>
+            <button class="admin-btn red admin-btn sm" style="width:100%;margin-bottom:8px" onclick="clearManualPoints()">加点を全クリア</button>
+            <div id="priorityList"></div>
+          </div>
         </div>
 
-        <!-- 回答者加点 -->
-        <div class="admin-card" id="apage-priority">
-          <div class="admin-card-title">📊 回答者加点</div>
-          <div class="admin-info" style="margin-bottom:8px">
-            <span style="color:var(--gold)">★代表集結主</span> +2　
-            <span style="color:#22c55e">●準集結主</span> +1　
-            <span style="color:#a78bfa">SVS</span> +1〜3（裁量）
+        <!-- 時間別集計タブ -->
+        <div class="edit-page" id="edit-result">
+          <div class="admin-card">
+            <div class="admin-card-title">⏱ 時間別集計</div>
+            <div class="admin-info" style="margin-bottom:8px">第1→第2→第3希望の順で割り当てます。</div>
+            <div class="seg" id="resultRoleSeg" style="margin-bottom:10px"></div>
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+              <button class="admin-btn gold" style="flex:1;height:40px" onclick="buildResults()">▶ 割り振り実行</button>
+              <button class="admin-btn" style="height:40px" onclick="buildResults()">🔄 再実行</button>
+            </div>
+            <div id="resultList"></div>
           </div>
-          <div style="margin-bottom:8px">
-            <button class="admin-btn red admin-btn sm" style="width:100%" onclick="clearManualPoints()">加点を全クリア</button>
-          </div>
-          <div id="priorityList"></div>
         </div>
 
-        <!-- 時間別集計 -->
-        <div class="admin-card" id="apage-result">
-          <div class="admin-card-title">⏱ 時間別集計</div>
-          <div class="admin-info" style="margin-bottom:8px">第1→第2→第3希望の順で割り当てます。同ポイントは回答順優先。</div>
-          <div class="seg" id="resultRoleSeg" style="margin-bottom:10px"></div>
-          <div style="display:flex;gap:8px;margin-bottom:10px">
-            <button class="admin-btn gold" style="flex:1;height:40px" onclick="buildResults()">▶ 割り振り実行</button>
-            <button class="admin-btn" style="height:40px" onclick="buildResults()">🔄 再実行</button>
+        <!-- 投稿文タブ -->
+        <div class="edit-page" id="edit-post">
+          <div class="admin-card">
+            <div class="admin-card-title">📢 投稿文</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">全員周知用</div>
+            <textarea class="post-box" id="postTextPublic" readonly></textarea>
+            <button class="admin-btn gold" style="width:100%;height:40px;margin-top:8px" onclick="copyPostText('public')">全員周知用をコピー</button>
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 6px">管理者用 詳細</div>
+            <textarea class="post-box" id="postTextAdmin" readonly></textarea>
+            <button class="admin-btn blue" style="width:100%;height:44px;margin-top:8px" onclick="copyPostText('admin')">管理者用をコピー</button>
           </div>
-          <div id="resultList"></div>
-        </div>
-
-        <!-- 投稿文 -->
-        <div class="admin-card" id="apage-post">
-          <div class="admin-card-title">📢 投稿文</div>
-          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">全員周知用</div>
-          <textarea class="post-box" id="postTextPublic" readonly></textarea>
-          <button class="admin-btn gold" style="width:100%;height:40px;margin-top:8px" onclick="copyPostText('public')">全員周知用をコピー</button>
-          <div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 6px">管理者用 詳細</div>
-          <textarea class="post-box" id="postTextAdmin" readonly></textarea>
-          <button class="admin-btn blue" style="width:100%;height:44px;margin-top:8px" onclick="copyPostText('admin')">管理者用をコピー</button>
         </div>
 
       </div><!-- /adminEditPanel -->
 
     </div>
-
-
-
-    <!-- 回答者加点 -->
-    <div class="admin-page" id="apage-priority">
-      <div class="admin-step">
-        <div class="admin-step-title">締切後にやること</div>
-        <div class="admin-step-text">回答者ごとに集結主・SVS貢献度のポイントを付与します。付与後に時間別集計タブで割り振りを実行してください。</div>
-      </div>
-      <div class="admin-info" style="margin-bottom:10px">
-        <span style="color:var(--gold)">★集結主</span> +2　
-        <span style="color:#22c55e">●準集結主</span> +1　
-        <span style="color:var(--purple,#a78bfa)">SVS</span> 貢献度 +1〜3（裁量）
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button class="admin-btn red" style="flex:1;height:40px" onclick="clearManualPoints()">加点を全クリア</button>
-      </div>
-      <div id="priorityList"></div>
-    </div>
-
-
-
-
-
   </div><!-- /admin-body -->
 </div><!-- /adminScreen -->
 
@@ -695,13 +678,16 @@ const ALL_SLOTS = [...AM_SLOTS, ...PM_SLOTS];
 // 座席データ
 // ===================================================
 const seats = {}, isMe = {};
-ADMIN_CONFIG.activeRoles.forEach(role => {
-  seats[role] = {}; isMe[role] = {};
+// 座席データはsurveeyIdをキーに管理（同じ官職のアンケートを分離）
+function initSeatData(surveyId){
+  if(!surveyId) return;
+  seats[surveyId] = {};
+  isMe[surveyId] = {};
   ALL_SLOTS.forEach(t => {
-    seats[role][t] = [0, 0, 0];
-    isMe[role][t] = [false, false, false];
+    seats[surveyId][t] = [0, 0, 0];
+    isMe[surveyId][t] = [false, false, false];
   });
-});
+}
 
 // デモデータ削除済み（Firebase接続）
 
@@ -803,15 +789,29 @@ function makeEmptySeatData(){
   return data;
 }
 
-// seats・isMe に存在しない役職を追加する
+// seats・isMe に存在しないsurveeyIdを追加する
 function ensureRoleExists(role){
-  if(!seats[role]){
-    seats[role] = {};
-    ALL_SLOTS.forEach(t=>{ seats[role][t] = [0,0,0]; });
+  // roleベースは後方互換用 - surveyIdで管理
+  const sid = currentSurveyId || role;
+  if(!seats[sid]){
+    seats[sid] = {};
+    ALL_SLOTS.forEach(t=>{ seats[sid][t] = [0,0,0]; });
   }
-  if(!isMe[role]){
-    isMe[role] = {};
-    ALL_SLOTS.forEach(t=>{ isMe[role][t] = [false,false,false]; });
+  if(!isMe[sid]){
+    isMe[sid] = {};
+    ALL_SLOTS.forEach(t=>{ isMe[sid][t] = [false,false,false]; });
+  }
+}
+
+function ensureSeatExists(surveyId){
+  if(!surveyId) return;
+  if(!seats[surveyId]){
+    seats[surveyId] = {};
+    ALL_SLOTS.forEach(t=>{ seats[surveyId][t] = [0,0,0]; });
+  }
+  if(!isMe[surveyId]){
+    isMe[surveyId] = {};
+    ALL_SLOTS.forEach(t=>{ isMe[surveyId][t] = [false,false,false]; });
   }
 }
 
@@ -834,13 +834,12 @@ function buildSeatDataFromSubmissions(list){
 }
 
 function applySeatData(data){
-  const allRoles = ['副執政官','教育部長'];
-  allRoles.forEach(role=>{
-    ensureRoleExists(role);
-    ALL_SLOTS.forEach(t=>{
-      seats[role][t] = (data && data[role] && data[role][t]) ? data[role][t].slice() : [0,0,0];
-      isMe[role][t] = [false,false,false];
-    });
+  const sid = currentSurveyId;
+  if(!sid) return;
+  ensureSeatExists(sid);
+  ALL_SLOTS.forEach(t=>{
+    seats[sid][t] = (data && data[t]) ? data[t].slice() : [0,0,0];
+    isMe[sid][t] = [false,false,false];
   });
 
   // 自分が選択中の希望は、表示上だけ my 扱いに戻す
@@ -866,12 +865,17 @@ function rebuildSeatsFromSubmissions(list){
 function saveSeatsToDBFromList(list){
   if(!fbDb || !currentSurveyId) return Promise.resolve();
   const data = buildSeatDataFromSubmissions(list || submissions);
-  return fbDb.ref(`seats/${currentSurveyId}`).set(Object.fromEntries(
-    Object.entries(data).map(([role, times])=>[
-      role,
-      Object.fromEntries(Object.entries(times).map(([time, counts])=>[time,{counts}]))
-    ])
-  )).catch(e=>console.warn("seats save failed", e));
+  const sid = currentSurveyId;
+  if(!sid) return Promise.resolve();
+  // seats/{surveyId}/{time} = {counts:[...]}
+  const flatData = {};
+  if(seats[sid]){
+    ALL_SLOTS.forEach(t=>{
+      flatData[t] = {counts: seats[sid][t] || [0,0,0]};
+    });
+  }
+  return fbDb.ref(`seats/${sid}`).set(flatData)
+    .catch(e=>console.warn("seats save failed", e));
 }
 
 function saveSeatsToDB(){
@@ -1114,18 +1118,19 @@ function showRegister(){
   // 再ログイン時は自分の前回選択をリセット
   if(userName){
     // 自分が押さえていたisMe枠を解放
-    ADMIN_CONFIG.activeRoles.concat(['副執政官','教育部長']).forEach(role=>{
-      if(!isMe[role]) return;
+    // 現在のsurveyIdの座席をリセット
+    const sidReset = currentSurveyId;
+    if(sidReset && isMe[sidReset]){
       ALL_SLOTS.forEach(t=>{
-        if(!isMe[role][t]) return;
-        isMe[role][t].forEach((mine, idx)=>{
+        if(!isMe[sidReset][t]) return;
+        isMe[sidReset][t].forEach((mine, idx)=>{
           if(mine){
-            seats[role][t][idx] = 0;
-            isMe[role][t][idx] = false;
+            seats[sidReset][t][idx] = 0;
+            isMe[sidReset][t][idx] = false;
           }
         });
       });
-    });
+    }
     myReservations[1] = null;
     myReservations[2] = null;
     myReservations[3] = null;
@@ -1182,9 +1187,18 @@ function resetReservations(){
 // ===================================================
 // 座席表
 // ===================================================
-function isFull(role, time){ return seats[role][time].every(p=>p>0); }
-function getOpenCount(role, time){ return seats[role][time].filter(p=>p===0).length; }
-function getMySlotIdx(role, time){ return isMe[role][time].indexOf(true); }
+function isFull(role, time){
+  const sid = currentSurveyId || role;
+  return seats[sid] && seats[sid][time] ? seats[sid][time].every(p=>p>0) : false;
+}
+function getOpenCount(role, time){
+  const sid = currentSurveyId || role;
+  return seats[sid] && seats[sid][time] ? seats[sid][time].filter(p=>p===0).length : 3;
+}
+function getMySlotIdx(role, time){
+  const sid = currentSurveyId || role;
+  return (isMe[sid] && isMe[sid][time]) ? isMe[sid][time].indexOf(true) : -1;
+}
 
 function renderSeats(){
   const container = document.getElementById('seatContainer');
@@ -1228,8 +1242,9 @@ function makeRow(time){
   indicators.className = 'slot-indicators';
   [0,1,2].forEach(i => {
     const dot = document.createElement('div');
-    const pref = seats[currentRole][time][i];
-    const mine = isMe[currentRole][time][i];
+    const sid = currentSurveyId || currentRole;
+    const pref = (seats[sid] && seats[sid][time]) ? seats[sid][time][i] : 0;
+    const mine = (isMe[sid] && isMe[sid][time]) ? isMe[sid][time][i] : false;
     dot.className = 'slot-dot'
       + (pref===0 ? ' open' : ` taken-${pref}`)
       + (mine ? ' my' : '');
@@ -1336,11 +1351,12 @@ function confirmPref(){
 function removePref(){
   const {time} = popupTarget;
   const role = currentRole;
-  const idx = isMe[role][time].indexOf(true);
+  const sidR = currentSurveyId || role;
+  const idx = isMe[sidR] && isMe[sidR][time] ? isMe[sidR][time].indexOf(true) : -1;
   if(idx>=0){
-    const pref = seats[role][time][idx];
+    const pref = seats[sidR][time][idx];
     myReservations[pref]=null;
-    seats[role][time][idx]=0; isMe[role][time][idx]=false;
+    seats[sidR][time][idx]=0; isMe[sidR][time][idx]=false;
   }
   closePopup();
   renderSeats();
@@ -1580,6 +1596,15 @@ function closeAdmin(){
 function switchAdminTab(el){
   document.querySelectorAll('.admin-tab').forEach(t=>t.classList.toggle('active', t===el));
   refreshSettingsTab();
+}
+
+function switchEditTab(el){
+  const tab = el.dataset.etab;
+  document.querySelectorAll('.edit-tab').forEach(t=>t.classList.toggle('active', t===el));
+  document.querySelectorAll('.edit-page').forEach(p=>p.classList.toggle('active', p.id===tab));
+  if(tab==='edit-priority') renderPriorityList();
+  if(tab==='edit-result'){ buildResultRoleSeg(); buildResults(); }
+  if(tab==='edit-post') buildPostText();
 }
 function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 
@@ -2392,7 +2417,6 @@ function openEditPanel(surveyId){
 
   // このアンケートのデータを読み込み
   
-  if(window._loadSurveyData) window._loadSurveyData(surveyId);
   // 締め切りボタン表示
   const closeBtn = document.getElementById('btnManualClose');
   if(closeBtn) closeBtn.style.display = s.status==='open'?'':'none';
@@ -2401,11 +2425,22 @@ function openEditPanel(surveyId){
   if(title) title.textContent = `📝 ${s.title||'無題'}`;
 
   renderAdminSurveyList();
-  // 選択アンケートのデータを各セクションに反映
-  renderPriorityList();
-  buildResultRoleSeg();
-  buildResults();
-  buildPostText();
+
+  // データ読み込み後に描画（Firebaseの読み込みを待つ）
+  if(window._loadSurveyData){
+    window._loadSurveyData(surveyId);
+    setTimeout(()=>{
+      renderPriorityList();
+      buildResultRoleSeg();
+      buildResults();
+      buildPostText();
+    }, 800);
+  } else {
+    renderPriorityList();
+    buildResultRoleSeg();
+    buildResults();
+    buildPostText();
+  }
 }
 
 // 新規作成パネル
@@ -2500,6 +2535,8 @@ function selectSurvey(surveyId){
   if(s.questions) ADMIN_CONFIG.questions = JSON.parse(JSON.stringify(s.questions));
   currentRole = ADMIN_CONFIG.activeRoles[0];
 
+  // 座席データを初期化
+  ensureSeatExists(surveyId);
   // このアンケートのデータを読み込み（回答・座席・ポイント）
   if(window._loadSurveyData) window._loadSurveyData(surveyId);
   buildRoleTabs();
