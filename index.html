@@ -417,10 +417,7 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
   </div>
   <!-- タブバー -->
   <div class="admin-tab-bar">
-    <div class="admin-tab active" data-atab="settings" onclick="switchAdminTab(this)">設定</div>
-    <div class="admin-tab" data-atab="priority" onclick="switchAdminTab(this)">回答者加点</div>
-    <div class="admin-tab" data-atab="result" onclick="switchAdminTab(this)">時間別集計</div>
-    <div class="admin-tab" data-atab="post" onclick="switchAdminTab(this)">投稿文</div>
+    <div class="admin-tab active" data-atab="settings" onclick="switchAdminTab(this)">アンケート管理</div>
   </div>
   <!-- ボディ -->
   <div class="admin-body">
@@ -489,7 +486,45 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
         <div class="admin-card">
           <button class="admin-btn red" style="width:100%;height:40px" onclick="deleteEditSurvey()">🗑 このアンケートを削除する</button>
         </div>
-      </div>
+
+        <!-- 回答者加点 -->
+        <div class="admin-card" id="apage-priority">
+          <div class="admin-card-title">📊 回答者加点</div>
+          <div class="admin-info" style="margin-bottom:8px">
+            <span style="color:var(--gold)">★代表集結主</span> +2　
+            <span style="color:#22c55e">●準集結主</span> +1　
+            <span style="color:#a78bfa">SVS</span> +1〜3（裁量）
+          </div>
+          <div style="margin-bottom:8px">
+            <button class="admin-btn red admin-btn sm" style="width:100%" onclick="clearManualPoints()">加点を全クリア</button>
+          </div>
+          <div id="priorityList"></div>
+        </div>
+
+        <!-- 時間別集計 -->
+        <div class="admin-card" id="apage-result">
+          <div class="admin-card-title">⏱ 時間別集計</div>
+          <div class="admin-info" style="margin-bottom:8px">第1→第2→第3希望の順で割り当てます。同ポイントは回答順優先。</div>
+          <div class="seg" id="resultRoleSeg" style="margin-bottom:10px"></div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button class="admin-btn gold" style="flex:1;height:40px" onclick="buildResults()">▶ 割り振り実行</button>
+            <button class="admin-btn" style="height:40px" onclick="buildResults()">🔄 再実行</button>
+          </div>
+          <div id="resultList"></div>
+        </div>
+
+        <!-- 投稿文 -->
+        <div class="admin-card" id="apage-post">
+          <div class="admin-card-title">📢 投稿文</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">全員周知用</div>
+          <textarea class="post-box" id="postTextPublic" readonly></textarea>
+          <button class="admin-btn gold" style="width:100%;height:40px;margin-top:8px" onclick="copyPostText('public')">全員周知用をコピー</button>
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 6px">管理者用 詳細</div>
+          <textarea class="post-box" id="postTextAdmin" readonly></textarea>
+          <button class="admin-btn blue" style="width:100%;height:44px;margin-top:8px" onclick="copyPostText('admin')">管理者用をコピー</button>
+        </div>
+
+      </div><!-- /adminEditPanel -->
 
     </div>
 
@@ -512,33 +547,9 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
       <div id="priorityList"></div>
     </div>
 
-    <!-- 時間別集計 -->
-    <div class="admin-page" id="apage-result">
-      <div class="admin-step">
-        <div class="admin-step-title">時間別の判定</div>
-        <div class="admin-step-text">第1希望→第2希望→第3希望の順で割り当てます。同ポイントは回答順優先です。</div>
-      </div>
-      <div class="seg" id="resultRoleSeg" style="margin-bottom:12px"></div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button class="admin-btn gold" style="flex:1;height:40px" onclick="buildResults()">▶ 割り振り実行</button>
-        <button class="admin-btn" style="height:40px" onclick="buildResults()">🔄 再実行</button>
-      </div>
-      <div id="resultList"></div>
-    </div>
 
-    <!-- 投稿文 -->
-    <div class="admin-page" id="apage-post">
-      <div class="admin-step">
-        <div class="admin-step-title">Discord投稿用</div>
-        <div class="admin-step-text">全員周知用は時間と名前だけ。管理者用はポイント・希望順位・補欠候補まで確認できます。</div>
-      </div>
-      <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">全員周知用</div>
-      <textarea class="post-box" id="postTextPublic" readonly></textarea>
-      <button class="admin-btn gold" style="width:100%;height:44px;margin-top:8px" onclick="copyPostText('public')">全員周知用をコピー</button>
-      <div style="font-size:13px;font-weight:700;color:var(--text2);margin:14px 0 6px">管理者用 詳細</div>
-      <textarea class="post-box" id="postTextAdmin" readonly></textarea>
-      <button class="admin-btn blue" style="width:100%;height:44px;margin-top:8px" onclick="copyPostText('admin')">管理者用をコピー</button>
-    </div>
+
+
 
   </div><!-- /admin-body -->
 </div><!-- /adminScreen -->
@@ -766,11 +777,13 @@ function initFirebase(){
   // surveyIdが変わったら再読み込み
   window._loadSubmissions = loadSubmissions;
 
-  // 手動ポイントを読み込み
-  fbDb.ref(DB_MANUALPTS).on('value', snap=>{
-    const d = snap.val();
-    if(d) manualPoints = d;
-  });
+  // 手動ポイントは選択アンケートごとに読み込む（loadManualPoints関数で）
+  window._loadManualPoints = function(surveyId){
+    if(!fbDb || !surveyId) return;
+    fbDb.ref(`${DB_MANUALPTS}/${surveyId}`).on('value', snap=>{
+      manualPoints = snap.val() || {};
+    });
+  };
 
   // メンバーリストを読み込み
   fbDb.ref(DB_MEMBERS).on('value', snap=>{
@@ -853,9 +866,9 @@ function rebuildSeatsFromSubmissions(list){
 
 // DB_SEATSは互換用に残すが、保存元は常に submissions から再構築する
 function saveSeatsToDBFromList(list){
-  if(!fbDb) return Promise.resolve();
+  if(!fbDb || !currentSurveyId) return Promise.resolve();
   const data = buildSeatDataFromSubmissions(list || submissions);
-  return fbDb.ref(DB_SEATS).set(Object.fromEntries(
+  return fbDb.ref(`seats/${currentSurveyId}`).set(Object.fromEntries(
     Object.entries(data).map(([role, times])=>[
       role,
       Object.fromEntries(Object.entries(times).map(([time, counts])=>[time,{counts}]))
@@ -890,8 +903,9 @@ function saveConfigToDB(){
 
 // 手動ポイントをDBに保存
 function saveManualPointsToDB(){
-  if(!fbDb) return;
-  fbDb.ref(DB_MANUALPTS).set(manualPoints).catch(e=>console.warn("manualPts save failed",e));
+  if(!fbDb || !adminEditSurveyId) return;
+  fbDb.ref(`${DB_MANUALPTS}/${adminEditSurveyId}`).set(manualPoints)
+    .catch(e=>console.warn("manualPts save failed",e));
 }
 
 // メンバーリストをDBに保存
@@ -1534,13 +1548,8 @@ function closeAdmin(){
   document.getElementById('adminScreen').classList.remove('open');
 }
 function switchAdminTab(el){
-  const tab = el.dataset.atab;
-  document.querySelectorAll('.admin-tab').forEach(t=>t.classList.toggle('active', t.dataset.atab===tab));
-  document.querySelectorAll('.admin-page').forEach(p=>p.classList.toggle('active', p.id==='apage-'+tab));
-  if(tab==='result'){ buildResultRoleSeg(); buildResults(); }
-  if(tab==='post') buildPostText();
-  if(tab==='members') renderAdminMembers();
-  if(tab==='settings') refreshSettingsTab();
+  document.querySelectorAll('.admin-tab').forEach(t=>t.classList.toggle('active', t===el));
+  refreshSettingsTab();
 }
 function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 
@@ -1696,9 +1705,9 @@ function resetSurveyData(newId){
 
   // Firebase リセット
   if(fbDb){
-    fbDb.ref(DB_SEATS).remove();
+    fbDb.ref(`seats/${newId}`).remove();
     fbDb.ref(`${DB_SUBMISSIONS}/${newId}`).remove();
-    fbDb.ref(DB_MANUALPTS).remove();
+    fbDb.ref(`${DB_MANUALPTS}/${newId}`).remove();
   }
 }
 
@@ -1813,50 +1822,19 @@ function showToast(msg){
   t._timer = setTimeout(()=>{ t.style.opacity='0'; }, 2500);
 }
 
-// 手動締切
-function manualClose(){
-  if(!confirm('今すぐアンケートを締め切りますか？')) return;
-  PUBLIC_SURVEY.status  = 'closed';
-  PUBLIC_SURVEY.endedAt = new Date().toISOString();
-  saveSurveyToDB({status:'closed', endedAt:PUBLIC_SURVEY.endedAt});
-  updateAdminStatusUI();
-  applyPublicSurveyState();
-}
+// 旧manualClose削除済み
 
 // 管理者ステータスUI更新
 function updateAdminStatusUI(){
-  const badge = document.getElementById('adminStatusBadge');
-  const info  = document.getElementById('adminDeadlineInfo');
+  // editSurveyベースで更新（openEditPanel内で呼ばれる）
+  const s = getEditSurvey();
+  if(!s) return;
+  const badge    = document.getElementById('editStatusBadge');
   const closeBtn = document.getElementById('btnManualClose');
-  if(!badge) return;
-  const s = PUBLIC_SURVEY.status;
-  if(s === 'open'){
-    badge.textContent = '受付中';
-    badge.style.color = '#22c55e';
-    if(info) info.textContent = PUBLIC_SURVEY.deadline
-      ? '締切: ' + PUBLIC_SURVEY.deadline.replace('T',' ')
-      : '';
-    if(closeBtn) closeBtn.style.display = '';
-  } else if(s === 'reserved'){
-    badge.textContent = '開始予約済';
-    badge.style.color = '#60a5fa';
-    if(info) info.textContent =
-      '開始: ' + (PUBLIC_SURVEY.reservedStart||'').replace('T',' ') +
-      '　終了: ' + (PUBLIC_SURVEY.deadline||'').replace('T',' ');
-    if(closeBtn) closeBtn.style.display = 'none';
-  } else if(s === 'closed'){
-    badge.textContent = '終了済';
-    badge.style.color = '#f59e0b';
-    if(info) info.textContent = PUBLIC_SURVEY.endedAt
-      ? '終了: ' + PUBLIC_SURVEY.endedAt.replace('T',' ').slice(0,16)
-      : '';
-    if(closeBtn) closeBtn.style.display = 'none';
-  } else {
-    badge.textContent = '未実施';
-    badge.style.color = '#6b7280';
-    if(info) info.textContent = '';
-    if(closeBtn) closeBtn.style.display = 'none';
-  }
+  const statusLabel = s.status==='open'?'受付中':s.status==='reserved'?'予約済':s.status==='closed'?'終了済':'未実施';
+  const statusColor = s.status==='open'?'#22c55e':s.status==='reserved'?'#60a5fa':s.status==='closed'?'#f59e0b':'#6b7280';
+  if(badge){ badge.textContent=statusLabel; badge.style.color=statusColor; badge.style.borderColor=statusColor; }
+  if(closeBtn) closeBtn.style.display = s.status==='open'?'':'none';
 }
 
 // 自動開始・終了タイマー（複数アンケート対応）
@@ -1888,22 +1866,21 @@ function startSurveyTimer(){
 }
 
 function getLatestClosedSurvey(){
-  // PUBLIC_SURVEYが締切済みならそれを返す（Firebase連動）
-  if(PUBLIC_SURVEY.status === 'closed' || PUBLIC_SURVEY.endedAt){
-    return PUBLIC_SURVEY;
-  }
-  // ローカルのsurveysからも探す（フォールバック）
-  const closed = surveys.filter(s=>s.status === 'closed' && s.endedAt);
+  // 編集中アンケートが締切済みならそれを使う
+  const edit = getEditSurvey();
+  if(edit && edit.status === 'closed') return edit;
+  // surveysMapから最新の締切済みを返す
+  const closed = Object.values(surveysMap).filter(s=>s.status==='closed' && s.endedAt);
   if(!closed.length) return null;
   closed.sort((a,b)=>String(b.endedAt).localeCompare(String(a.endedAt)));
   return closed[0];
 }
 function getTargetSubmissions(){
-  // submissionsは全回答を返す（surveyIdフィルタは緩く）
+  // 選択中アンケートの回答のみ返す
   if(!submissions.length) return [];
-  const survey = getLatestClosedSurvey();
-  if(!survey) return submissions;
-  return submissions.filter(s=>!s.surveyId || s.surveyId === survey.id || s.surveyId === currentSurveyId);
+  const sid = adminEditSurveyId || currentSurveyId;
+  if(!sid) return submissions;
+  return submissions.filter(s=>!s.surveyId || s.surveyId === sid);
 }
 function getTargetSurveyLabel(){
   const survey = getLatestClosedSurvey();
@@ -2379,6 +2356,8 @@ function openEditPanel(surveyId){
   const statusColor = s.status==='open'?'#22c55e':s.status==='reserved'?'#60a5fa':s.status==='closed'?'#f59e0b':'#6b7280';
   if(badge){ badge.textContent=statusLabel; badge.style.color=statusColor; badge.style.borderColor=statusColor; }
 
+  // 手動ポイントを読み込み
+  if(window._loadManualPoints) window._loadManualPoints(surveyId);
   // 締め切りボタン表示
   const closeBtn = document.getElementById('btnManualClose');
   if(closeBtn) closeBtn.style.display = s.status==='open'?'':'none';
@@ -2386,7 +2365,12 @@ function openEditPanel(surveyId){
   const title = document.getElementById('editPanelTitle');
   if(title) title.textContent = `📝 ${s.title||'無題'}`;
 
-  renderAdminSurveyList(); // 選択状態を反映
+  renderAdminSurveyList();
+  // 選択アンケートのデータを各セクションに反映
+  renderPriorityList();
+  buildResultRoleSeg();
+  buildResults();
+  buildPostText();
 }
 
 // 新規作成パネル
@@ -2473,7 +2457,7 @@ function renderSurveyList(){
 function selectSurvey(surveyId){
   const s = surveysMap[surveyId];
   if(!s || s.status !== 'open') return;
-  surveySelected = true;  // 一覧を再表示しないようにフラグセット
+  surveySelected = true;
   currentSurveyId = surveyId;
 
   // 選択したアンケートの官職・質問を反映
@@ -2481,7 +2465,7 @@ function selectSurvey(surveyId){
   if(s.questions) ADMIN_CONFIG.questions = JSON.parse(JSON.stringify(s.questions));
   currentRole = ADMIN_CONFIG.activeRoles[0];
 
-  // 座席表を再構築
+  // 座席・回答データを再構築
   rebuildSeatsFromDBSubmissions(surveyId);
   buildRoleTabs();
   buildQuestions();
@@ -2578,8 +2562,9 @@ function buildPostText(){
   }
   buildResultsNoRender();
 
-  // 実施した官職のみ（activeRolesに含まれるものだけ）
-  const roles = ADMIN_CONFIG.activeRoles.filter(Boolean);
+  // 選択中アンケートの官職のみ
+  const editS = getEditSurvey();
+  const roles = editS ? [editS.role].filter(Boolean) : ADMIN_CONFIG.activeRoles.filter(Boolean);
 
   const publicLines = [];
   const adminLines = [`【対象アンケート】${getTargetSurveyLabel()}`, ''];
