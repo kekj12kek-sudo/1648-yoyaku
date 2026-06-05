@@ -303,13 +303,27 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
 
 <!-- 通行止めポップアップ -->
 <div class="state-overlay open" id="stateOverlay">
-  <div class="state-popup">
-    <div class="state-icon" id="stateIcon">ℹ️</div>
-    <div class="state-title" id="stateTitle">アンケートは実施されていません</div>
-    <div class="state-message" id="stateMessage">募集が開始されるまでお待ちください。</div>
-    <div id="surveyListArea" style="margin-top:8px"></div>
-    <button class="state-back-btn" style="margin-top:16px" onclick="location.href='https://kekj12kek-sudo.github.io/1648-hq/'">← ホームに戻る</button>
-    <button id="btnAdminEntry" onclick="openAdmin()" style="width:100%;height:44px;margin-top:8px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;">管理者はこちら</button>
+  <div class="state-popup" id="statePopup">
+
+    <!-- 未実施画面（デフォルト） -->
+    <div id="stateNone">
+      <div style="font-size:48px;margin-bottom:12px">ℹ️</div>
+      <div style="font-size:17px;font-weight:900;color:var(--text);margin-bottom:8px">アンケートは実施されていません</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6">募集が開始されるまでお待ちください。</div>
+      <button class="state-back-btn" onclick="location.href='https://kekj12kek-sudo.github.io/1648-hq/'">← ホームに戻る</button>
+      <button onclick="openAdmin()" style="width:100%;height:44px;margin-top:8px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;">管理者はこちら</button>
+    </div>
+
+    <!-- アンケート一覧画面（実施中） -->
+    <div id="stateList" style="display:none">
+      <div style="font-size:48px;margin-bottom:12px">📋</div>
+      <div style="font-size:17px;font-weight:900;color:var(--text);margin-bottom:6px">官職予約アンケート</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">回答するアンケートを選択してください。</div>
+      <div id="surveyListArea"></div>
+      <button class="state-back-btn" style="margin-top:14px" onclick="location.href='https://kekj12kek-sudo.github.io/1648-hq/'">← ホームに戻る</button>
+      <button onclick="openAdmin()" style="width:100%;height:36px;margin-top:6px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:11px;cursor:pointer;">管理者はこちら</button>
+    </div>
+
   </div>
 </div>
 
@@ -1779,10 +1793,8 @@ function saveAdminSurveySettings(){
 }
 
 function getEditSurveyRole(){
-  const r1 = document.getElementById('tog-副執政官')?.checked;
-  const r2 = document.getElementById('tog-教育部長')?.checked;
-  if(r1) return '副執政官';
-  if(r2) return '教育部長';
+  const b2 = document.getElementById('roleBtn-教育部長');
+  if(b2 && b2.classList.contains('on')) return '教育部長';
   return '副執政官';
 }
 
@@ -2424,49 +2436,39 @@ function deleteEditSurvey(){
 function renderSurveyList(){
   if(adminLoggedIn || surveySelected) return;
 
-  const overlay = document.getElementById('stateOverlay');
-  const area    = document.getElementById('surveyListArea');
-  const iconEl  = document.getElementById('stateIcon');
-  const titleEl = document.getElementById('stateTitle');
-  const msgEl   = document.getElementById('stateMessage');
-
   const visible = getVisibleSurveys();
 
-  // 常に通行止め画面を表示（アンケートがあれば一覧を追加）
-  overlay.classList.add('open');
-
   if(!visible.length){
-    iconEl.textContent  = 'ℹ️';
-    titleEl.textContent = 'アンケートは実施されていません';
-    msgEl.textContent   = '募集が開始されるまでお待ちください。';
-    if(area) area.innerHTML = '';
+    // 未実施画面
+    document.getElementById('stateNone').style.display = '';
+    document.getElementById('stateList').style.display = 'none';
+    document.getElementById('stateOverlay').classList.add('open');
     return;
   }
 
-  // 実施中アンケートあり
-  iconEl.textContent  = '📋';
-  titleEl.textContent = '官職予約アンケート';
-  msgEl.textContent   = '回答するアンケートを選択してください。';
-  if(area){
-    area.innerHTML = '';
-    visible.forEach(s=>{
-      const isClosed = s.status === 'closed';
-      const card = document.createElement('div');
-      card.className = `survey-card ${isClosed?'closed-card':'open-card'}`;
-      const deadline = s.deadline ? '締切: '+s.deadline.replace('T',' ').slice(0,16) : '';
-      card.innerHTML = `
-        <div class="survey-card-header">
-          <div class="survey-card-title">${escapeHtml(s.title||'官職予約')}</div>
-          <span class="survey-card-badge ${isClosed?'closed':'open'}">${isClosed?'終了済':'受付中'}</span>
-        </div>
-        <div class="survey-card-meta">${s.role||''}${deadline?' / '+deadline:''}</div>
-      `;
-      if(!isClosed) card.onclick = ()=>selectSurvey(s.id);
-      area.appendChild(card);
-    });
-  }
-}
+  // アンケート一覧画面
+  document.getElementById('stateNone').style.display = 'none';
+  document.getElementById('stateList').style.display = '';
+  document.getElementById('stateOverlay').classList.add('open');
 
+  const area = document.getElementById('surveyListArea');
+  area.innerHTML = '';
+  visible.forEach(s=>{
+    const isClosed = s.status === 'closed';
+    const card = document.createElement('div');
+    card.className = 'survey-card ' + (isClosed ? 'closed-card' : 'open-card');
+    const deadline = s.deadline ? '締切: ' + s.deadline.replace('T',' ').slice(0,16) : '';
+    card.innerHTML = `
+      <div class="survey-card-header">
+        <div class="survey-card-title">${escapeHtml(s.title||'官職予約')}</div>
+        <span class="survey-card-badge ${isClosed?'closed':'open'}">${isClosed?'終了済':'受付中'}</span>
+      </div>
+      <div class="survey-card-meta">${s.role||''}${deadline?' / '+deadline:''}</div>
+    `;
+    if(!isClosed) card.onclick = ()=>selectSurvey(s.id);
+    area.appendChild(card);
+  });
+}
 // アンケートを選択して回答画面へ
 function selectSurvey(surveyId){
   const s = surveysMap[surveyId];
