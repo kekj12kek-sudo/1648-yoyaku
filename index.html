@@ -1974,8 +1974,14 @@ function getTargetSubmissions(){
   return submissions.filter(s=>!s.surveyId || s.surveyId === sid);
 }
 function getTargetSurveyLabel(){
+  // 編集中アンケートのタイトルを優先
+  const edit = getEditSurvey();
+  if(edit){
+    const date = edit.endedAt ? new Date(edit.endedAt).toLocaleString('ja-JP', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    return `${edit.title || '無題'}${date ? ' / 終了: '+date : ''}`;
+  }
   const survey = getLatestClosedSurvey();
-  if(!survey) return '終了済みアンケートなし';
+  if(!survey) return 'アンケートなし';
   const date = survey.endedAt ? new Date(survey.endedAt).toLocaleString('ja-JP', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
   return `${survey.title || '直近アンケート'}${date ? ' / 終了: '+date : ''}`;
 }
@@ -2674,7 +2680,9 @@ function buildPostText(){
   const roles = editS ? [editS.role].filter(Boolean) : ADMIN_CONFIG.activeRoles.filter(Boolean);
 
   const publicLines = [];
-  const adminLines = [`【対象アンケート】${getTargetSurveyLabel()}`, ''];
+  const surveyTitle = (getEditSurvey()?.title) || getTargetSurveyLabel();
+  
+  const adminLines = [`【${surveyTitle}】割り振り結果`, ''];
 
   roles.forEach((role, idx)=>{
     if(idx>0){
