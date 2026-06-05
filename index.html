@@ -341,6 +341,7 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
     <div class="reg-err" id="regErr"></div>
     <button class="btn-start" onclick="startReservation()">✓ 希望時間選択へ進む</button>
     <button onclick="openAdmin()" style="width:100%;height:36px;margin-top:8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:11px;cursor:pointer;position:relative;z-index:350;">管理者はこちら</button>
+    <button onclick="goBackToSurveyList()" style="width:100%;height:36px;margin-top:6px;border-radius:10px;border:none;background:transparent;color:var(--text3);font-size:11px;cursor:pointer;">← 一覧に戻る</button>
   </div>
 </div>
 
@@ -579,7 +580,10 @@ input:checked+.tsl:before{transform:translateX(22px);background:#fff;}
     <div class="complete-title">受付完了！</div>
     <div class="complete-sub">アンケートを受け付けました。<br>結果は管理者から通知されます。</div>
     <div class="complete-detail" id="completeDetail"></div>
-    <button class="btn-close-complete" onclick="closeComplete()">閉じる</button>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+      <button class="btn-close-complete" id="btnGoSurveyList" onclick="goBackToSurveyList()" style="display:none;background:#1e3a8a;border-color:#3b82f6;color:#93c5fd;">📋 他のアンケートに回答する</button>
+      <button class="btn-close-complete" onclick="location.href='https://kekj12kek-sudo.github.io/1648-hq/'">← ホームに戻る</button>
+    </div>
   </div>
 </div>
 
@@ -777,13 +781,7 @@ function initFirebase(){
   // surveyIdが変わったら再読み込み
   window._loadSubmissions = loadSubmissions;
 
-  // 手動ポイントは選択アンケートごとに読み込む（loadManualPoints関数で）
-  window._loadManualPoints = function(surveyId){
-    if(!fbDb || !surveyId) return;
-    fbDb.ref(`${DB_MANUALPTS}/${surveyId}`).on('value', snap=>{
-      manualPoints = snap.val() || {};
-    });
-  };
+  // manualPointsの読み込みはloadSurveyDataで統合済み
 
   // メンバーリストを読み込み
   fbDb.ref(DB_MEMBERS).on('value', snap=>{
@@ -903,8 +901,9 @@ function saveConfigToDB(){
 
 // 手動ポイントをDBに保存
 function saveManualPointsToDB(){
-  if(!fbDb || !adminEditSurveyId) return;
-  fbDb.ref(`${DB_MANUALPTS}/${adminEditSurveyId}`).set(manualPoints)
+  const sid = adminEditSurveyId || currentSurveyId;
+  if(!fbDb || !sid) return;
+  fbDb.ref(`${DB_MANUALPTS}/${sid}`).set(manualPoints)
     .catch(e=>console.warn("manualPts save failed",e));
 }
 
@@ -1469,11 +1468,36 @@ function showConfirm(){
     renderSeats();
   }
 
+// 他に実施中アンケートがあれば分岐ボタンを表示
+  const otherSurveys = getVisibleSurveys().filter(s => s.id !== currentSurveyId && s.status === 'open');
+  const btnOther = document.getElementById('btnGoSurveyList');
+  if(btnOther) btnOther.style.display = otherSurveys.length ? '' : 'none';
   document.getElementById('completeOverlay').classList.add('open');
+}
 }
 
 function closeComplete(){
   document.getElementById('completeOverlay').classList.remove('open');
+}
+
+// 一覧に戻る（完了画面・登録画面から）
+function goBackToSurveyList(){
+  // 状態をリセット
+  surveySelected = false;
+  submitted = false;
+  userName = '';
+  userAnswers = {};
+  myReservations[1]=null; myReservations[2]=null; myReservations[3]=null;
+  isOmakase = false;
+  currentSurveyId = '';
+  document.getElementById('userName').textContent = '👤 未登録';
+
+  // 全画面を閉じる
+  document.getElementById('completeOverlay').classList.remove('open');
+  document.getElementById('registerOverlay').style.display = 'none';
+
+  // 一覧を再表示
+  renderSurveyList();
 }
 
 
@@ -2356,8 +2380,9 @@ function openEditPanel(surveyId){
   const statusColor = s.status==='open'?'#22c55e':s.status==='reserved'?'#60a5fa':s.status==='closed'?'#f59e0b':'#6b7280';
   if(badge){ badge.textContent=statusLabel; badge.style.color=statusColor; badge.style.borderColor=statusColor; }
 
-  // 手動ポイントを読み込み
-  if(window._loadManualPoints) window._loadManualPoints(surveyId);
+  // このアンケートのデータを読み込み
+  
+  if(window._loadSurveyData) window._loadSurveyData(surveyId);
   // 締め切りボタン表示
   const closeBtn = document.getElementById('btnManualClose');
   if(closeBtn) closeBtn.style.display = s.status==='open'?'':'none';
@@ -2465,11 +2490,10 @@ function selectSurvey(surveyId){
   if(s.questions) ADMIN_CONFIG.questions = JSON.parse(JSON.stringify(s.questions));
   currentRole = ADMIN_CONFIG.activeRoles[0];
 
-  // 座席・回答データを再構築
-  rebuildSeatsFromDBSubmissions(surveyId);
+  // このアンケートのデータを読み込み（回答・座席・ポイント）
+  if(window._loadSurveyData) window._loadSurveyData(surveyId);
   buildRoleTabs();
   buildQuestions();
-  if(window._loadSubmissions) window._loadSubmissions(surveyId);
 
   // 一覧を閉じて登録画面へ
   document.getElementById('stateOverlay').classList.remove('open');
