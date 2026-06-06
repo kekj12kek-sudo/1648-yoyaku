@@ -1754,6 +1754,14 @@ function toggleBonusItem(i, checked){
   renderBonusItemList();
 }
 
+function setBonusType(i, type){
+  ADMIN_CONFIG.bonusItems[i].type = type;
+  if(type === 'fixed' && !ADMIN_CONFIG.bonusItems[i].pt)  ADMIN_CONFIG.bonusItems[i].pt  = 1;
+  if(type === 'manual' && !ADMIN_CONFIG.bonusItems[i].max) ADMIN_CONFIG.bonusItems[i].max = 5;
+  saveBonusItems();
+  renderBonusItemList();
+}
+
 function addBonusItem(){
   ADMIN_CONFIG.bonusItems.push({ id:'b_custom_'+Date.now(), label:'新しい項目', max:2, enabled:false });
   saveBonusItems();
